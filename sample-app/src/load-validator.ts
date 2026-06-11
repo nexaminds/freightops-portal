@@ -25,7 +25,7 @@ export type ValidationResult =
 // "PO--00001234" passes here and reaches ERP PO linkage downstream,
 // which rejects it with ERP_PO_LINKAGE_FAILED.
 // FIX: change * to + (one-or-more).
-const PO_REGEX = /^PO-[A-Z0-9]*-\d{4,8}$/;
+const PO_REGEX = /^PO-[A-Z0-9]+-\d{4,8}$/;
 
 export function validatePONumber(value: string): ValidationResult {
   if (value === undefined || value === null) {
@@ -75,13 +75,13 @@ export function validateConsigneeName(value: string): ValidationResult {
 // field passes here and reaches the carrier-lookup service downstream,
 // which rejects it with CARRIER_LOOKUP_FAILED.
 // FIX: change * to {2,4}.
-const SCAC_REGEX = /^[A-Z]*$/;
+const SCAC_REGEX = /^[A-Z]{2,4}$/;
 
 export function validateCarrierSCAC(value: string): ValidationResult {
   if (value === undefined || value === null) {
     return { ok: false, code: "CARRIER_REQUIRED", field: "carrier_scac" };
   }
-  const scac = value.trim().toUpperCase();
+  const scac = value.trim();
   if (!SCAC_REGEX.test(scac)) {
     return { ok: false, code: "CARRIER_INVALID_FORMAT", field: "carrier_scac" };
   }
@@ -100,6 +100,9 @@ export function validateLoadWeight(value: string): ValidationResult {
   // !value check above passes; isNaN(0) is false so this check passes too.
   // Zero-weight loads reach carrier rate calculation → CARRIER_RATE_FAILED.
   // FIX: add:  if (n <= 0) return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE", ... }
+  if (n <= 0) {
+    return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE", field: "weight_lbs" };
+  }
   if (n > 80000) {
     return { ok: false, code: "WEIGHT_EXCEEDS_LIMIT", field: "weight_lbs" };
   }
