@@ -1,0 +1,13 @@
+{
+  "name": "freightops-portal-metrics-server",
+  "version": "1.0.0",
+  "description": "Static portal server with Prometheus /metrics + /events endpoint",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "prom-client": "^15.1.3"
+  }
+}

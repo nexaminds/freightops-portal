@@ -1,0 +1,15 @@
+{
+  "name": "freightops-load-portal",
+  "version": "1.0.0",
+  "description": "FreightOps load-creation validator — synthetic demo for NexAI auto-fix",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0",
+    "vitest": "^2.1.0"
+  }
+}

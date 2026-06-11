@@ -1,0 +1,230 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: freightops-load-validation
+    folder: FreightOps
+    interval: 1m
+    rules:
+
+      # ── B1 / B2 / B3 composite: downstream failure rate ──────────────────
+      - uid: frt-load-failure-rate
+        title: "FreightOps · Load Validation Failure Rate > 10%"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(freightops_load_create_validation_failures_total[5m]))
+              refId: A
+
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                clamp_min(
+                  sum(rate(freightops_load_create_attempts_total{step="2"}[5m])),
+                  0.001
+                )
+              refId: B
+
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              expression: "$A / $B > 0.10"
+              refId: C
+
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: sev2
+          service: freightops-portal
+          env: prod
+          team: freight-engineering
+        annotations:
+          summary: "FreightOps load validation failure rate exceeded 10%"
+          description: >
+            {{ $values.A.Value | printf "%.4f" }} failures/s over
+            {{ $values.B.Value | printf "%.4f" }} step-2 attempts/s.
+            Rate: {{ printf "%.1f" (mulf ($values.A.Value | divf $values.B.Value) 100.0) }}%.
+            Likely cause: active bug toggle (B1 PO regex, B2 weight zero, or B3 empty SCAC).
+          runbook_url: "http://localhost:3000/d/freightops-loads?orgId=1"
+          dashboard_url: "http://localhost:3000/d/freightops-loads?orgId=1"
+
+      # ── B1 individual: ERP_PO_LINKAGE_FAILED ─────────────────────────────
+      - uid: frt-erp-po-linkage
+        title: "FreightOps · ERP PO Linkage Failures"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(freightops_load_create_validation_failures_total{
+                  error_code="ERP_PO_LINKAGE_FAILED"
+                }[5m]))
+              refId: A
+
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                clamp_min(
+                  sum(rate(freightops_load_create_attempts_total{step="1"}[5m])),
+                  0.001
+                )
+              refId: B
+
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              expression: "$A / $B > 0.10"
+              refId: C
+
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: sev2
+          service: freightops-portal
+          env: prod
+          bug: b1_create_load_po
+        annotations:
+          summary: "ERP PO linkage failures elevated (bug B1: PO regex *)"
+          description: >
+            PO numbers with empty customer-code segments (PO--XXXXXXXX) are passing
+            client validation and failing ERP linkage. Suspect: B1 PO_REGEX uses *
+            quantifier instead of +. Fix: change /^PO-[A-Z0-9]*-/ to /^PO-[A-Z0-9]+-/.
+          runbook_url: "http://localhost:3000/d/freightops-loads?orgId=1"
+
+      # ── B2 individual: CARRIER_RATE_FAILED ───────────────────────────────
+      - uid: frt-carrier-rate
+        title: "FreightOps · Carrier Rate Calculation Failures"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(freightops_load_create_validation_failures_total{
+                  error_code="CARRIER_RATE_FAILED"
+                }[5m]))
+              refId: A
+
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                clamp_min(
+                  sum(rate(freightops_load_create_attempts_total{step="2"}[5m])),
+                  0.001
+                )
+              refId: B
+
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              expression: "$A / $B > 0.10"
+              refId: C
+
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: sev2
+          service: freightops-portal
+          env: prod
+          bug: b2_register_load_weight
+        annotations:
+          summary: "Carrier rate failures elevated (bug B2: zero-weight allowed)"
+          description: >
+            Loads with weight=0 or negative are passing client validation and failing
+            carrier rate calculation. Suspect: B2 validateLoadWeight missing n <= 0 guard.
+            Fix: add `if (n <= 0) return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE" }`.
+
+      # ── B3 individual: CARRIER_LOOKUP_FAILED ─────────────────────────────
+      - uid: frt-carrier-lookup
+        title: "FreightOps · Carrier Lookup Failures"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                sum(rate(freightops_load_create_validation_failures_total{
+                  error_code="CARRIER_LOOKUP_FAILED"
+                }[5m]))
+              refId: A
+
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: |
+                clamp_min(
+                  sum(rate(freightops_load_create_attempts_total{step="2"}[5m])),
+                  0.001
+                )
+              refId: B
+
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              expression: "$A / $B > 0.10"
+              refId: C
+
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: sev2
+          service: freightops-portal
+          env: prod
+          bug: b3_register_load_carrier
+        annotations:
+          summary: "Carrier SCAC lookup failures elevated (bug B3: empty SCAC allowed)"
+          description: >
+            Empty SCAC codes are passing client validation and failing carrier network
+            lookup. Suspect: B3 SCAC_REGEX uses * (zero-or-more) instead of {2,4}.
+            Fix: change /^[A-Z]*$/ to /^[A-Z]{2,4}$/.

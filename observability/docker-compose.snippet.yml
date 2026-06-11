@@ -1,0 +1,159 @@
+version: "3.9"
+
+# Run the full stack:
+#   docker compose -f observability/docker-compose.snippet.yml up -d
+#
+# Services exposed:
+#   portal-app  →  http://localhost:8080
+#   prometheus  →  http://localhost:9094
+#   grafana     →  http://localhost:3001  (admin / freight2026)
+#   loki        →  http://localhost:3100  (internal only; Grafana datasource)
+#   promtail    →  (no external port; scrapes Docker socket)
+
+networks:
+  freightops:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  promtail-positions:
+    driver: local
+
+services:
+
+  portal-app:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["node", "metrics-server/server.js"]
+    volumes:
+      - type: bind
+        source: ../
+        target: /app
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      STATIC_DIR: "/app/public"
+      APP_NAME: "freightops-portal"
+      APP_ENV:  "prod"
+      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
+      SLACK_CHANNEL:   "${SLACK_CHANNEL:-}"
+      PLAYBOOK_PATH:   "demo/logistics/playbooks/incident-response-v1.md"
+    depends_on:
+      - prometheus
+    networks:
+      - freightops
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.Name}}"
+    labels:
+      logging: loki
+      env: prod
+      app: freightops-portal
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - type: bind
+        source: ./prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9094:9090"
+    networks:
+      - freightops
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.Name}}"
+    labels:
+      logging: loki
+      env: prod
+      app: prometheus
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - type: bind
+        source: ./grafana/provisioning
+        target: /etc/grafana/provisioning
+        read_only: true
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: freight2026
+      GF_SERVER_HTTP_PORT:        "3000"
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+      GF_ALERTING_ENABLED:         "false"
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - freightops
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.Name}}"
+    labels:
+      logging: loki
+      env: prod
+      app: grafana
+
+  loki:
+    image: grafana/loki:3.1.0
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - type: bind
+        source: ./loki-config.yml
+        target: /etc/loki/loki-config.yml
+        read_only: true
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - freightops
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.Name}}"
+    labels:
+      logging: loki
+      env: prod
+      app: loki
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    volumes:
+      - type: bind
+        source: ./promtail-config.yml
+        target: /etc/promtail/promtail-config.yml
+        read_only: true
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail-positions:/var/lib/promtail
+    depends_on:
+      - loki
+    networks:
+      - freightops
+    logging:
+      driver: json-file
+      options:
+        tag: "{{.Name}}"
+    labels:
+      logging: loki
+      env: prod
+      app: promtail

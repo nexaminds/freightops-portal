@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FreightOps — Load Management Portal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231e4d8c'/%3E%3Cpath d='M15 62h70M15 62l15-28h40l15 28M30 62v10M70 62v10M22 62h56' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            freight: {
+              50:  '#eef2fb',
+              100: '#d5e0f5',
+              200: '#adc1ea',
+              300: '#7a9dd8',
+              500: '#1e4d8c',
+              600: '#173d72',
+              700: '#102e57',
+              800: '#0a1f3d',
+              900: '#05102a',
+              ink: '#0d1e38',
+            },
+            freightaccent: { DEFAULT: '#f97316', dark: '#c2570e', light: '#ffedd5' },
+            freightlime:  '#86efac',
+            freightamber: '#fbbf24',
+            freightrose:  '#f43f5e',
+            freightline:  '#e2e8f2',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+          },
+          boxShadow: {
+            soft: '0 1px 2px rgba(13,30,56,0.06), 0 4px 12px rgba(13,30,56,0.04)',
+            card: '0 1px 3px rgba(13,30,56,0.05), 0 8px 24px rgba(13,30,56,0.06)',
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .step-active  { background: #1e4d8c; color: #fff; box-shadow: 0 0 0 4px rgba(30,77,140,0.15); }
+    .step-done    { background: #f97316; color: #fff; }
+    .step-pending { background: #eef2fb; color: #7a8499; }
+    @keyframes toast-in { from { transform: translateY(20px); opacity:0 } to { transform:none; opacity:1 } }
+    .toast { animation: toast-in .25s ease-out; }
+    @keyframes status-pulse { 0%,100% { box-shadow: 0 0 0 0 currentColor } 50% { box-shadow: 0 0 0 6px transparent } }
+    .status-dot::before {
+      content:""; display:inline-block; width:8px; height:8px;
+      background:currentColor; border-radius:999px; margin-right:8px;
+      animation: status-pulse 2.4s ease-in-out infinite; vertical-align:1px;
+    }
+    .lift { transition: transform .15s ease, box-shadow .15s ease; }
+    .lift:hover { transform: translateY(-2px); }
+    .field-error input, .field-error select { border-color: #f43f5e !important; box-shadow: 0 0 0 3px rgba(244,63,94,0.12) !important; }
+    @keyframes skeleton { from { background-position: -200px 0 } to { background-position: calc(200px + 100%) 0 } }
+    .skel { background: linear-gradient(90deg,#eef2fb 0%,#f8fafc 50%,#eef2fb 100%); background-size:200px 100%; animation:skeleton 1.4s ease-in-out infinite; border-radius:6px; }
+    .scrim { background: rgba(13,30,56,0.55); backdrop-filter: blur(2px); }
+    [hidden] { display:none !important; }
+    details summary { cursor:pointer; list-style:none; }
+    details > summary::-webkit-details-marker { display:none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-freight-ink min-h-screen flex flex-col">
+
+  <!-- Status bar -->
+  <div id="status-bar" class="bg-emerald-50 border-b border-emerald-200 text-emerald-900 text-xs">
+    <div class="max-w-7xl mx-auto px-4 py-1.5 flex items-center justify-between">
+      <span id="status-bar-dot" class="status-dot text-emerald-600 font-medium">All systems operational</span>
+      <span class="hidden sm:inline text-emerald-800/70" id="status-bar-detail">Last checked just now · auto-refresh 10s</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-white border-b border-freightline">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3" aria-label="FreightOps home">
+        <div class="w-9 h-9 bg-freight-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">🚛</div>
+        <div>
+          <div class="text-base font-semibold text-freight-900 leading-tight">FreightOps</div>
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 leading-tight">Load Management Portal</div>
+        </div>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-slate-700">
+        <a href="#" class="hover:text-freight-500">Loads</a>
+        <a href="#" class="hover:text-freight-500">Carriers</a>
+        <a href="#" class="hover:text-freight-500">PO Tracking</a>
+        <a href="#" class="hover:text-freight-500">Reports</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <button class="hidden sm:inline-block text-sm text-freight-500 font-medium px-3 py-2">Sign in</button>
+        <button id="cta-create-load-top" class="bg-freight-500 hover:bg-freight-600 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-sm">Create Load</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Landing -->
+  <main id="view-landing" class="flex-1">
+
+    <!-- Hero -->
+    <section class="bg-gradient-to-br from-freight-50 via-white to-freightaccent/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20 grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-freightaccent/15 text-freightaccent-dark px-3 py-1.5 rounded-full text-xs font-medium mb-5">
+            <span class="w-1.5 h-1.5 bg-freightaccent-dark rounded-full"></span>
+            120,000+ loads dispatched this quarter
+          </div>
+          <h1 class="text-4xl sm:text-5xl font-bold text-freight-900 leading-tight tracking-tight">
+            Dispatch.<br>Track. Deliver.
+          </h1>
+          <p class="mt-5 text-lg text-slate-600 max-w-lg leading-relaxed">
+            Create loads, book carriers, manage POs, and track every shipment — from first mile to final delivery.
+          </p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <button id="cta-create-load-hero" class="bg-freight-500 hover:bg-freight-600 text-white font-medium px-6 py-3 rounded-lg shadow-sm flex items-center gap-2">
+              Create a load
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.7 4.3a1 1 0 011.4 0l5 5a1 1 0 010 1.4l-5 5a1 1 0 01-1.4-1.4L11.6 11H3a1 1 0 110-2h8.6L7.7 5.7a1 1 0 010-1.4z"/></svg>
+            </button>
+            <button class="bg-white hover:bg-slate-50 text-freight-700 font-medium px-6 py-3 rounded-lg border border-freightline">View load board</button>
+          </div>
+          <div class="mt-6 text-xs text-slate-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>✓ DOT/FMCSA compliant</span>
+            <span>✓ EDI X12 210/214/204</span>
+            <span>✓ ISO 9001:2015</span>
+            <span>✓ SOC 2 Type II</span>
+          </div>
+        </div>
+
+        <!-- Hero card: recent load activity -->
+        <div class="bg-white rounded-2xl shadow-card border border-freightline p-6 lg:p-7 lift max-w-md ml-auto w-full">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-slate-500">Active loads</div>
+              <div class="text-lg font-semibold text-freight-900 mt-0.5">Today · Jun 11, 2026</div>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-freightaccent/15 flex items-center justify-center text-freightaccent-dark font-semibold text-sm">3</div>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 rounded-lg bg-freight-50 border border-freight-100">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-freight-500 flex items-center justify-center text-white text-sm">🚛</div>
+                <div>
+                  <div class="text-sm font-semibold text-freight-900">LD-2026-08841</div>
+                  <div class="text-xs text-slate-600">Chicago → New York · UPSF · 24,500 lbs</div>
+                </div>
+              </div>
+              <span class="text-xs bg-freight-100 text-freight-700 px-2 py-0.5 rounded font-medium">In Transit</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center text-white text-sm">📋</div>
+                <div>
+                  <div class="text-sm font-semibold text-freight-900">LD-2026-08842</div>
+                  <div class="text-xs text-slate-600">Dallas → LA · RDWY · 18,200 lbs · Pending</div>
+                </div>
+              </div>
+              <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">Pending</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center text-white text-sm">✓</div>
+                <div>
+                  <div class="text-sm font-semibold text-freight-900">LD-2026-08838</div>
+                  <div class="text-xs text-slate-600">Miami → Atlanta · FXFE · Delivered</div>
+                </div>
+              </div>
+              <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">Delivered</span>
+            </div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-freightline text-xs text-slate-500">Demo data · synthetic loads only</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature cards -->
+    <section class="border-t border-freightline bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="p-6 rounded-xl border border-freightline lift">
+            <div class="w-11 h-11 rounded-lg bg-freight-50 text-freight-600 flex items-center justify-center text-xl">📦</div>
+            <h3 class="mt-4 font-semibold text-freight-900">PO → Load in seconds</h3>
+            <p class="mt-1.5 text-sm text-slate-600 leading-relaxed">Import purchase orders directly from your ERP, auto-match to available carriers, and dispatch in one click. Average booking time: 47 seconds.</p>
+          </div>
+          <div class="p-6 rounded-xl border border-freightline lift">
+            <div class="w-11 h-11 rounded-lg bg-freight-50 text-freight-600 flex items-center justify-center text-xl">🗺️</div>
+            <h3 class="mt-4 font-semibold text-freight-900">Real-time ELD tracking</h3>
+            <p class="mt-1.5 text-sm text-slate-600 leading-relaxed">Live position updates from 400+ carrier ELD integrations. GPS breadcrumbs every 5 minutes, geofence alerts at pickup and delivery.</p>
+          </div>
+          <div class="p-6 rounded-xl border border-freightline lift">
+            <div class="w-11 h-11 rounded-lg bg-freight-50 text-freight-600 flex items-center justify-center text-xl">⚡</div>
+            <h3 class="mt-4 font-semibold text-freight-900">Automated incident resolution</h3>
+            <p class="mt-1.5 text-sm text-slate-600 leading-relaxed">NexAI monitors every validation gate and carrier API. When a downstream failure fires, autonomous agents triage and fix within minutes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust band -->
+    <section class="bg-slate-50 border-y border-freightline">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <div class="text-center text-xs uppercase tracking-widest text-slate-500 mb-6">Industry standards & compliance</div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div class="bg-white border border-freightline rounded-lg p-4 text-center"><div class="text-xs text-slate-500">Safety</div><div class="font-bold text-freight-900 mt-1">FMCSA</div><div class="text-[10px] text-slate-500 mt-0.5">49 CFR 385</div></div>
+          <div class="bg-white border border-freightline rounded-lg p-4 text-center"><div class="text-xs text-slate-500">EDI</div><div class="font-bold text-freight-900 mt-1">X12 204/210</div><div class="text-[10px] text-slate-500 mt-0.5">ANSI X12</div></div>
+          <div class="bg-white border border-freightline rounded-lg p-4 text-center"><div class="text-xs text-slate-500">Quality</div><div class="font-bold text-freight-900 mt-1">ISO 9001</div><div class="text-[10px] text-slate-500 mt-0.5">2015 certified</div></div>
+          <div class="bg-white border border-freightline rounded-lg p-4 text-center"><div class="text-xs text-slate-500">Security</div><div class="font-bold text-freight-900 mt-1">SOC 2 II</div><div class="text-[10px] text-slate-500 mt-0.5">Audited 2026</div></div>
+          <div class="bg-white border border-freightline rounded-lg p-4 text-center"><div class="text-xs text-slate-500">Tracking</div><div class="font-bold text-freight-900 mt-1">ELD Mandate</div><div class="text-[10px] text-slate-500 mt-0.5">49 CFR 395.8</div></div>
+          <div class="bg-white border border-freightline rounded-lg p-4 text-center"><div class="text-xs text-slate-500">Carriers</div><div class="font-bold text-freight-900 mt-1">400+ SCACs</div><div class="text-[10px] text-slate-500 mt-0.5">NMFC network</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NexAI transparency section -->
+    <section class="bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14 grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          <div class="text-xs uppercase tracking-widest text-freightaccent-dark mb-3">Operational transparency</div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-freight-900">How we keep loads moving</h2>
+          <p class="mt-4 text-slate-600 leading-relaxed">Every validation event from this portal flows into <strong>NexAI</strong>, a platform of autonomous AI agents that triage, fix, and document production incidents in minutes. Carrier lookup failures, PO linkage errors, and weight-check regressions are caught and resolved before they impact your shipments.</p>
+          <ul class="mt-5 space-y-3 text-sm text-slate-700">
+            <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-freightaccent/20 text-freightaccent-dark flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span><span><strong>Detect</strong> — Grafana watches every validation gate with sub-second granularity. A spike in ERP_PO_LINKAGE_FAILED fires a Sev2 within 30 seconds.</span></li>
+            <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-freightaccent/20 text-freightaccent-dark flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span><span><strong>Triage</strong> — NexAI SRE correlates the metric spike to the suspect validator change in under 90 seconds.</span></li>
+            <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-freightaccent/20 text-freightaccent-dark flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span><span><strong>Fix</strong> — NexAI Fullstack opens a code-review-ready PR. NexAI SDET adds the regression test that would have caught it.</span></li>
+            <li class="flex items-start gap-3"><span class="w-5 h-5 rounded-full bg-freightaccent/20 text-freightaccent-dark flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span><span><strong>Audit</strong> — Immutable postmortem written. Human reviews and merges before any change ships.</span></li>
+          </ul>
+        </div>
+
+        <!-- Sample incident card -->
+        <div class="bg-slate-50 rounded-2xl border border-freightline p-6 lg:p-7">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+              <span class="text-xs uppercase tracking-wider text-emerald-700 font-semibold">Resolved · last 30 days</span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">corr_INC_FRT8X4KDEMO</span>
+          </div>
+          <div class="bg-white rounded-xl border border-freightline divide-y divide-freightline">
+            <div class="p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="w-2 h-2 bg-rose-500 rounded-full"></span><span class="text-sm">Alert fired · load validation failure rate &gt; 10%</span></div><span class="text-xs text-slate-500 font-mono">+0s</span></div>
+            <div class="p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="w-2 h-2 bg-amber-500 rounded-full"></span><span class="text-sm">NexAI SRE · PO_REGEX * → ERP_PO_LINKAGE_FAILED</span></div><span class="text-xs text-slate-500 font-mono">+1m 20s</span></div>
+            <div class="p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="w-2 h-2 bg-amber-500 rounded-full"></span><span class="text-sm">NexAI Fullstack · fix proposed (change * to +)</span></div><span class="text-xs text-slate-500 font-mono">+3m 10s</span></div>
+            <div class="p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="w-2 h-2 bg-amber-500 rounded-full"></span><span class="text-sm">NexAI SDET · regression test added</span></div><span class="text-xs text-slate-500 font-mono">+4m 55s</span></div>
+            <div class="p-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span><span class="text-sm font-medium">Postmortem emailed · $2.91 agent compute</span></div><span class="text-xs text-slate-500 font-mono">+9m 40s</span></div>
+          </div>
+          <div class="mt-4 text-xs text-slate-500">Total wall time: <strong>9 min 40 s</strong> · 0 loads disrupted · 1 PR merged</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-freight-900 text-slate-300">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 bg-freight-500 rounded-lg flex items-center justify-center text-white font-bold">🚛</div>
+            <span class="text-white font-semibold">FreightOps</span>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">Synthetic-data TMS demo. No real shipment data present. v1.0.0.</p>
+        </div>
+        <div>
+          <div class="text-white font-semibold mb-3 text-sm">Operations</div>
+          <ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-white">Load board</a></li><li><a href="#" class="hover:text-white">Carrier network</a></li><li><a href="#" class="hover:text-white">PO management</a></li><li><a href="#" class="hover:text-white">Reports</a></li></ul>
+        </div>
+        <div>
+          <div class="text-white font-semibold mb-3 text-sm">Compliance</div>
+          <ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-white">FMCSA compliance</a></li><li><a href="#" class="hover:text-white">EDI standards</a></li><li><a href="#" class="hover:text-white">Security disclosures</a></li></ul>
+        </div>
+        <div>
+          <div class="text-white font-semibold mb-3 text-sm">Platform</div>
+          <ul class="space-y-2 text-sm"><li><a href="#" id="footer-status" class="hover:text-white">System status</a></li><li><a href="#" id="footer-nexai" class="hover:text-white">How incidents are handled</a></li><li><a href="#" class="hover:text-white">Contact support</a></li></ul>
+        </div>
+      </div>
+      <div class="border-t border-freight-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
+          <span>© 2026 FreightOps, Inc. · Synthetic demo data — no real shipment data present.</span>
+          <span class="font-mono">Build <span id="build-sha">main</span> · v1.0.0</span>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Dashboard -->
+  <main id="view-dashboard" hidden class="flex-1 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-500">Load management</div>
+          <h1 class="text-3xl font-bold text-freight-900 mt-1">Load Board</h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="dashboard-create-another" class="bg-freight-500 hover:bg-freight-600 text-white px-4 py-2 rounded-lg text-sm font-medium">+ New Load</button>
+          <button id="dashboard-signout" class="bg-white border border-freightline hover:border-freight-300 px-4 py-2 rounded-lg text-sm font-medium text-freight-700">Sign out</button>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white border border-freightline rounded-xl p-5"><div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Active</div><div class="text-3xl font-bold text-freight-900">24</div><div class="text-xs text-slate-500 mt-1">in transit</div></div>
+        <div class="bg-white border border-freightline rounded-xl p-5"><div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Pending</div><div class="text-3xl font-bold text-freight-900">7</div><div class="text-xs text-slate-500 mt-1">awaiting carrier</div></div>
+        <div class="bg-white border border-freightline rounded-xl p-5"><div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Delivered</div><div class="text-3xl font-bold text-freight-900">142</div><div class="text-xs text-slate-500 mt-1">this month</div></div>
+        <div class="bg-white border border-freightline rounded-xl p-5"><div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Exceptions</div><div class="text-3xl font-bold text-freight-900" id="dashboard-exceptions">0</div><div class="text-xs text-slate-500 mt-1">validation failures</div></div>
+      </div>
+
+      <div class="bg-white border border-freightline rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-freightline flex items-center justify-between">
+          <h3 class="font-semibold text-freight-900">Recent loads</h3>
+          <span class="text-xs text-slate-500">Including your new load</span>
+        </div>
+        <div class="divide-y divide-freightline">
+          <div id="new-load-row" class="px-6 py-4 flex items-center justify-between bg-freight-50/50">
+            <div class="flex items-center gap-4">
+              <span class="text-xs bg-freightaccent/10 text-freightaccent-dark px-2 py-0.5 rounded font-mono font-medium" id="new-load-id">LD-NEW</span>
+              <div>
+                <div class="text-sm font-medium text-freight-900" id="new-load-route">— → —</div>
+                <div class="text-xs text-slate-500" id="new-load-meta">—</div>
+              </div>
+            </div>
+            <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">Dispatched</span>
+          </div>
+          <div class="px-6 py-4 flex items-center justify-between"><div class="flex items-center gap-4"><span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">LD-2026-08841</span><div><div class="text-sm text-freight-900">Chicago, IL → New York, NY</div><div class="text-xs text-slate-500">UPSF · 24,500 lbs · PO-ACME-00012345</div></div></div><span class="text-xs bg-freight-100 text-freight-700 px-2 py-0.5 rounded font-medium">In Transit</span></div>
+          <div class="px-6 py-4 flex items-center justify-between"><div class="flex items-center gap-4"><span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">LD-2026-08842</span><div><div class="text-sm text-freight-900">Dallas, TX → Los Angeles, CA</div><div class="text-xs text-slate-500">RDWY · 18,200 lbs · PO-BIGCO-00098765</div></div></div><span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">Pending</span></div>
+          <div class="px-6 py-4 flex items-center justify-between"><div class="flex items-center gap-4"><span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">LD-2026-08838</span><div><div class="text-sm text-freight-900">Miami, FL → Atlanta, GA</div><div class="text-xs text-slate-500">FXFE · 9,800 lbs · PO-RETL-00007712</div></div></div><span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">Delivered</span></div>
+        </div>
+      </div>
+
+      <div class="mt-6 text-center text-xs text-slate-500">
+        Synthetic demo data · no real shipment data · all interactions traced under
+        <code class="font-mono bg-white border border-freightline px-1.5 py-0.5 rounded">corr_INC_*</code>
+      </div>
+    </div>
+  </main>
+
+  <!-- ─── CREATE LOAD MODAL ─── -->
+  <div id="modal-create-load" hidden class="fixed inset-0 z-40 scrim flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8" role="dialog" aria-labelledby="load-modal-title">
+      <div class="px-6 sm:px-8 py-5 border-b border-freightline flex items-center justify-between">
+        <div>
+          <h2 id="load-modal-title" class="text-xl font-semibold text-freight-900">Create a new load</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Matches PO to carrier · validates weight · dispatches to ELD network</p>
+        </div>
+        <button id="modal-close" class="text-slate-400 hover:text-slate-600 p-1" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.3 4.3a1 1 0 011.4 0L10 8.6l4.3-4.3a1 1 0 111.4 1.4L11.4 10l4.3 4.3a1 1 0 11-1.4 1.4L10 11.4l-4.3 4.3a1 1 0 11-1.4-1.4L8.6 10 4.3 5.7a1 1 0 010-1.4z"/></svg>
+        </button>
+      </div>
+
+      <!-- Step indicators -->
+      <div class="px-6 sm:px-8 py-4 border-b border-freightline">
+        <div class="flex items-center justify-between max-w-sm mx-auto text-xs">
+          <div class="flex items-center gap-2 flex-1">
+            <span id="step-ind-1" class="step-active w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold">1</span>
+            <span class="text-slate-700 hidden sm:inline">PO Details</span>
+          </div>
+          <div class="h-px bg-freightline flex-1 mx-1"></div>
+          <div class="flex items-center gap-2 flex-1">
+            <span id="step-ind-2" class="step-pending w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold">2</span>
+            <span class="text-slate-500 hidden sm:inline">Load Details</span>
+          </div>
+          <div class="h-px bg-freightline flex-1 mx-1"></div>
+          <div class="flex items-center gap-2 flex-1">
+            <span id="step-ind-3" class="step-pending w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold">3</span>
+            <span class="text-slate-500 hidden sm:inline">Dispatch</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: PO Details -->
+      <div id="step-1" class="px-6 sm:px-8 py-6">
+        <div id="step-1-error" class="hidden mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm" role="alert"></div>
+        <p class="text-sm text-slate-600 mb-5">Enter the purchase order details. The PO number links this load to your ERP system.</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">PO Number <span class="text-rose-500">*</span></label>
+            <input id="load-po-number" type="text" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500" placeholder="PO-ACME-00012345" />
+            <div class="text-xs text-slate-500 mt-1">Format: PO-{CUSTOMER}-{SEQUENCE} · e.g. PO-ACME-00012345</div>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Shipper name <span class="text-rose-500">*</span></label>
+            <input id="load-shipper" type="text" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500" placeholder="ACME Corp" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Consignee name <span class="text-rose-500">*</span></label>
+            <input id="load-consignee" type="text" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500" placeholder="BigMart DC" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Commodity type</label>
+            <select id="load-commodity" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500">
+              <option value="General Freight">General Freight</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Automotive Parts">Automotive Parts</option>
+              <option value="Food & Beverage">Food &amp; Beverage</option>
+              <option value="Hazmat Class 3">Hazmat Class 3</option>
+              <option value="Refrigerated">Refrigerated</option>
+            </select>
+          </div>
+        </div>
+        <label class="flex items-start gap-2 mt-5 text-sm text-slate-700">
+          <input id="load-terms" type="checkbox" class="mt-1 accent-freight-500" />
+          <span>I confirm this load complies with DOT/FMCSA regulations and the shipper has authorized dispatch. <span class="text-rose-600">*required</span></span>
+        </label>
+        <div class="mt-6 flex items-center justify-between">
+          <button id="modal-close-2" type="button" class="text-sm text-slate-500 hover:text-slate-700">Cancel</button>
+          <button id="step-1-next" type="button" class="bg-freight-500 hover:bg-freight-600 text-white font-medium px-5 py-2.5 rounded-lg flex items-center gap-2">
+            Continue
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.7 4.3a1 1 0 011.4 0l5 5a1 1 0 010 1.4l-5 5a1 1 0 01-1.4-1.4L11.6 11H3a1 1 0 110-2h8.6L7.7 5.7a1 1 0 010-1.4z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Load Details -->
+      <div id="step-2" hidden class="px-6 sm:px-8 py-6">
+        <div id="step-2-error" class="hidden mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm" role="alert"></div>
+        <p class="text-sm text-slate-600 mb-5">Enter carrier and load details. The SCAC code is used for carrier lookup in our network.</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Carrier SCAC <span class="text-rose-500">*</span></label>
+            <input id="load-scac" type="text" maxlength="4" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500 font-mono uppercase" placeholder="UPSF" />
+            <div class="text-xs text-slate-500 mt-1">2–4 letter carrier code (e.g. UPSF, RDWY, FXFE)</div>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Weight (lbs) <span class="text-rose-500">*</span></label>
+            <input id="load-weight" type="number" min="1" max="80000" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500" placeholder="15000" />
+            <div class="text-xs text-slate-500 mt-1">Max 80,000 lbs · gross vehicle weight</div>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Origin ZIP <span class="text-rose-500">*</span></label>
+            <input id="load-origin-zip" type="text" maxlength="10" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500 font-mono" placeholder="60601" />
+          </div>
+          <div>
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Destination ZIP <span class="text-rose-500">*</span></label>
+            <input id="load-dest-zip" type="text" maxlength="10" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500 font-mono" placeholder="10001" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-sm font-medium text-freight-900 mb-1.5 block">Pickup date <span class="text-rose-500">*</span></label>
+            <input id="load-pickup-date" type="date" class="w-full border border-freightline rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-freight-500/30 focus:border-freight-500" />
+          </div>
+        </div>
+        <div class="mt-6 flex items-center justify-between">
+          <button id="step-2-back" type="button" class="text-sm text-slate-600 hover:text-slate-800">← Back</button>
+          <button id="step-2-next" type="button" class="bg-freight-500 hover:bg-freight-600 text-white font-medium px-5 py-2.5 rounded-lg flex items-center gap-2">
+            Review
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.7 4.3a1 1 0 011.4 0l5 5a1 1 0 010 1.4l-5 5a1 1 0 01-1.4-1.4L11.6 11H3a1 1 0 110-2h8.6L7.7 5.7a1 1 0 010-1.4z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Confirm & Dispatch -->
+      <div id="step-3" hidden class="px-6 sm:px-8 py-6">
+        <div id="step-3-error" class="hidden mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm" role="alert"></div>
+        <p class="text-sm text-slate-600 mb-5">Review your load and confirm dispatch. Once dispatched, the carrier will be notified via EDI 204.</p>
+        <div class="bg-slate-50 rounded-xl border border-freightline p-4 space-y-3 text-sm" id="load-summary">
+          <div class="flex justify-between"><span class="text-slate-500">PO Number</span><span class="font-medium font-mono" id="review-po">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Shipper</span><span class="font-medium" id="review-shipper">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Consignee</span><span class="font-medium" id="review-consignee">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Carrier SCAC</span><span class="font-medium font-mono" id="review-scac">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Weight</span><span class="font-medium" id="review-weight">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Route</span><span class="font-medium font-mono" id="review-route">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Pickup</span><span class="font-medium" id="review-pickup">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Commodity</span><span class="font-medium" id="review-commodity">—</span></div>
+        </div>
+        <div class="mt-6 flex items-center justify-between">
+          <button id="step-3-back" type="button" class="text-sm text-slate-600 hover:text-slate-800">← Back</button>
+          <button id="step-3-dispatch" type="button" class="bg-freightaccent-dark hover:bg-freightaccent text-white font-medium px-6 py-2.5 rounded-lg flex items-center gap-2">
+            Dispatch load
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4L8.5 12 15.3 5.3a1 1 0 011.4 0z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Success -->
+      <div id="success" hidden class="px-6 sm:px-8 py-10 text-center">
+        <div class="w-16 h-16 bg-freightaccent/15 text-freightaccent-dark rounded-full flex items-center justify-center mx-auto text-3xl">🚛</div>
+        <h3 class="mt-5 text-xl font-semibold text-freight-900">Load dispatched!</h3>
+        <p class="text-sm text-slate-600 mt-2 max-w-md mx-auto">Load ID <span class="font-mono font-medium text-freight-700" id="success-load-id">LD-PENDING</span> is en route. The carrier has been notified via EDI 204.</p>
+        <button id="goto-dashboard" type="button" class="mt-6 bg-freight-500 hover:bg-freight-600 text-white font-medium px-6 py-3 rounded-lg">Open load board →</button>
+      </div>
+
+      <div class="px-6 sm:px-8 py-3 border-t border-freightline text-[11px] text-slate-500 flex items-center justify-between">
+        <span>✓ Encrypted in transit (TLS 1.3)</span>
+        <span>Validator: <span id="validator-version" class="font-mono">v1.0.0-buggy</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed bottom-4 left-4 z-30 space-y-2 max-w-sm"></div>
+
+  <!-- ─── DEMO CONTROL PILL ─── -->
+  <div id="demo-pill" class="fixed bottom-4 right-4 z-30 bg-freight-900 text-white rounded-xl shadow-2xl border border-freight-700 max-w-xs">
+    <div class="px-4 py-3 border-b border-freight-700 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span id="demo-pill-dot" class="w-2 h-2 bg-emerald-400 rounded-full"></span>
+        <span class="text-xs uppercase tracking-wider font-semibold">Bug controls</span>
+      </div>
+      <button id="demo-pill-toggle" class="text-slate-400 hover:text-white text-xs">▾</button>
+    </div>
+    <div id="demo-pill-body" class="px-4 py-3 space-y-3 text-xs">
+      <!-- B1 -->
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <div class="font-semibold">B1 · Create Load</div>
+          <div class="text-slate-400 text-[10px] mt-0.5" id="b1-state-label">FIXED · PO regex +</div>
+        </div>
+        <button id="toggle-b1" class="bg-rose-500/80 hover:bg-rose-500 text-white px-2.5 py-1 rounded text-[11px] font-medium">Toggle</button>
+      </div>
+      <!-- B2 -->
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <div class="font-semibold">B2 · Register Load</div>
+          <div class="text-slate-400 text-[10px] mt-0.5" id="b2-state-label">FIXED · weight &gt; 0</div>
+        </div>
+        <button id="toggle-b2" class="bg-rose-500/80 hover:bg-rose-500 text-white px-2.5 py-1 rounded text-[11px] font-medium">Toggle</button>
+      </div>
+      <!-- B3 -->
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <div class="font-semibold">B3 · Register Load</div>
+          <div class="text-slate-400 text-[10px] mt-0.5" id="b3-state-label">FIXED · SCAC {2,4}</div>
+        </div>
+        <button id="toggle-b3" class="bg-rose-500/80 hover:bg-rose-500 text-white px-2.5 py-1 rounded text-[11px] font-medium">Toggle</button>
+      </div>
+      <hr class="border-freight-700" />
+      <a href="http://localhost:9094/graph" target="_blank" rel="noopener" class="block text-slate-300 hover:text-white">→ Prometheus (localhost:9094)</a>
+      <a href="http://localhost:3001"        target="_blank" rel="noopener" class="block text-slate-300 hover:text-white">→ Grafana (localhost:3001)</a>
+    </div>
+  </div>
+
+  <script>
+    // ──────────────────── Metric emitter ────────────────────
+    function emitMetric(event, payload) {
+      try {
+        if (location.protocol === 'file:' || !location.hostname) return;
+        fetch('/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event, payload: payload || {} }),
+        }).catch(() => {});
+      } catch (_) {}
+    }
+
+    // ──────────────────── Toast ────────────────────
+    function toast(msg, kind) {
+      kind = kind || 'info';
+      const tone = {
+        info:    'bg-freight-900 text-white border-freight-700',
+        success: 'bg-emerald-600 text-white border-emerald-700',
+        warn:    'bg-amber-500 text-white border-amber-600',
+        error:   'bg-rose-600 text-white border-rose-700',
+      }[kind] || 'bg-freight-900 text-white border-freight-700';
+      const el = document.createElement('div');
+      el.className = `toast border rounded-lg shadow-lg px-4 py-3 text-sm ${tone}`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 5000);
+    }
+
+    // ──────────────────── Bug toggle state ────────────────────
+    let useB1 = false; // B1: PO regex * vs +
+    let useB2 = false; // B2: weight zero check missing
+    let useB3 = false; // B3: SCAC regex * vs {2,4}
+
+    // ──────────────────── Validators ────────────────────
+
+    function validatePONumber(v) {
+      if (!v || !v.trim()) return { ok: false, code: 'PO_REQUIRED', field: 'po_number' };
+      const po = v.trim().toUpperCase();
+      if (po.length > 30) return { ok: false, code: 'PO_TOO_LONG', field: 'po_number' };
+      // B1 toggle: buggy regex uses * (allows empty customer-code segment)
+      const regex = useB1
+        ? /^PO-[A-Z0-9]*-\d{4,8}$/   // BUGGY
+        : /^PO-[A-Z0-9]+-\d{4,8}$/;  // FIXED
+      if (!regex.test(po)) return { ok: false, code: 'PO_INVALID_FORMAT', field: 'po_number' };
+      return { ok: true };
+    }
+
+    function validateShipperName(v) {
+      if (!v || !v.trim()) return { ok: false, code: 'SHIPPER_REQUIRED', field: 'shipper_name' };
+      if (v.length > 100) return { ok: false, code: 'SHIPPER_TOO_LONG', field: 'shipper_name' };
+      return { ok: true };
+    }
+
+    function validateConsigneeName(v) {
+      if (!v || !v.trim()) return { ok: false, code: 'CONSIGNEE_REQUIRED', field: 'consignee_name' };
+      if (v.length > 100) return { ok: false, code: 'CONSIGNEE_TOO_LONG', field: 'consignee_name' };
+      return { ok: true };
+    }
+
+    function validateCarrierSCAC(v) {
+      if (v === undefined || v === null) return { ok: false, code: 'CARRIER_REQUIRED', field: 'carrier_scac' };
+      const scac = v.trim().toUpperCase();
+      // B3 toggle: buggy regex uses * (allows empty SCAC "")
+      const regex = useB3
+        ? /^[A-Z]*$/    // BUGGY
+        : /^[A-Z]{2,4}$/; // FIXED
+      if (!regex.test(scac)) return { ok: false, code: 'CARRIER_INVALID_FORMAT', field: 'carrier_scac' };
+      return { ok: true };
+    }
+
+    function validateLoadWeight(v) {
+      if (!v && v !== 0) return { ok: false, code: 'WEIGHT_REQUIRED', field: 'weight_lbs' };
+      const n = Number(v);
+      if (isNaN(n)) return { ok: false, code: 'WEIGHT_INVALID', field: 'weight_lbs' };
+      // B2 toggle: buggy path skips n <= 0 guard
+      if (!useB2 && n <= 0) return { ok: false, code: 'WEIGHT_MUST_BE_POSITIVE', field: 'weight_lbs' };
+      if (n > 80000) return { ok: false, code: 'WEIGHT_EXCEEDS_LIMIT', field: 'weight_lbs' };
+      return { ok: true };
+    }
+
+    function validateOriginZip(v) {
+      if (!v || !v.trim()) return { ok: false, code: 'ORIGIN_ZIP_REQUIRED', field: 'origin_zip' };
+      if (!/^\d{5}(-\d{4})?$/.test(v.trim())) return { ok: false, code: 'ORIGIN_ZIP_INVALID', field: 'origin_zip' };
+      return { ok: true };
+    }
+
+    function validateDestinationZip(v) {
+      if (!v || !v.trim()) return { ok: false, code: 'DEST_ZIP_REQUIRED', field: 'destination_zip' };
+      if (!/^\d{5}(-\d{4})?$/.test(v.trim())) return { ok: false, code: 'DEST_ZIP_INVALID', field: 'destination_zip' };
+      return { ok: true };
+    }
+
+    function validatePickupDate(v) {
+      if (!v) return { ok: false, code: 'PICKUP_DATE_REQUIRED', field: 'pickup_date' };
+      if (isNaN(new Date(v).getTime())) return { ok: false, code: 'PICKUP_DATE_INVALID', field: 'pickup_date' };
+      return { ok: true };
+    }
+
+    // Expose for test harnesses
+    window.validatePONumber    = validatePONumber;
+    window.validateCarrierSCAC = validateCarrierSCAC;
+    window.validateLoadWeight  = validateLoadWeight;
+    window.validateOriginZip   = validateOriginZip;
+    window.validateDestinationZip = validateDestinationZip;
+    window.validatePickupDate  = validatePickupDate;
+
+    // ──────────────────── Modal navigation ────────────────────
+    const modalEl = document.getElementById('modal-create-load');
+
+    function openModal() { modalEl.hidden = false; document.body.classList.add('overflow-hidden'); showStep(1); }
+    function closeModal() { modalEl.hidden = true; document.body.classList.remove('overflow-hidden'); }
+
+    document.getElementById('cta-create-load-top').onclick  = openModal;
+    document.getElementById('cta-create-load-hero').onclick = openModal;
+    document.getElementById('modal-close').onclick          = closeModal;
+    document.getElementById('modal-close-2').onclick        = closeModal;
+    document.getElementById('dashboard-create-another').onclick = openModal;
+
+    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    function showStep(n) {
+      ['step-1','step-2','step-3','success'].forEach(id => document.getElementById(id).hidden = true);
+      document.getElementById(n === 'done' ? 'success' : 'step-' + n).hidden = false;
+      [1,2,3].forEach(i => {
+        const el = document.getElementById('step-ind-' + i);
+        el.className = el.className.replace(/step-\w+/, '');
+        if (n === 'done' || i < n) el.className += ' step-done w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold';
+        else if (i === n)          el.className += ' step-active w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold';
+        else                       el.className += ' step-pending w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold';
+      });
+    }
+
+    function showError(stepId, msg) {
+      const e = document.getElementById(stepId + '-error');
+      e.textContent = msg; e.hidden = false;
+    }
+    function clearError(stepId) { document.getElementById(stepId + '-error').hidden = true; }
+
+    // ──────────────────── Step 1 ────────────────────
+    document.getElementById('step-1-next').onclick = () => {
+      clearError('step-1');
+      const po        = document.getElementById('load-po-number').value;
+      const shipper   = document.getElementById('load-shipper').value;
+      const consignee = document.getElementById('load-consignee').value;
+      const terms     = document.getElementById('load-terms').checked;
+
+      if (!terms) return showError('step-1', 'Please accept the dispatch terms to continue.');
+
+      emitMetric('load_create_attempt', { step: 1 });
+
+      const checks = [validatePONumber(po), validateShipperName(shipper), validateConsigneeName(consignee)];
+      const failed = checks.find(c => !c.ok);
+
+      // Downstream anomaly detection: empty customer-code segment passed B1 buggy validator
+      const emptyCustomerCode = /^PO--/i.test(po.trim().toUpperCase());
+      const reachedERP = !failed && validatePONumber(po).ok && emptyCustomerCode;
+
+      if (reachedERP) {
+        emitMetric('load_create_validation_failure', { error_code: 'ERP_PO_LINKAGE_FAILED', bug: 'b1' });
+        toast('ERP PO linkage failed — empty customer-code segment rejected by ERP. Our team has been alerted.', 'warn');
+        showStep(2);
+        return;
+      }
+
+      if (failed) {
+        emitMetric('load_create_client_rejection', { code: failed.code });
+        return showError('step-1', `Please fix: ${failed.field} (${failed.code}).`);
+      }
+
+      showStep(2);
+    };
+
+    // ──────────────────── Step 2 ────────────────────
+    document.getElementById('step-2-next').onclick = () => {
+      clearError('step-2');
+      const scac       = document.getElementById('load-scac').value;
+      const weight     = document.getElementById('load-weight').value;
+      const originZip  = document.getElementById('load-origin-zip').value;
+      const destZip    = document.getElementById('load-dest-zip').value;
+      const pickupDate = document.getElementById('load-pickup-date').value;
+
+      emitMetric('load_create_attempt', { step: 2 });
+
+      const scacCheck   = validateCarrierSCAC(scac);
+      const weightCheck = validateLoadWeight(weight);
+      const ozCheck     = validateOriginZip(originZip);
+      const dzCheck     = validateDestinationZip(destZip);
+      const pdCheck     = validatePickupDate(pickupDate);
+
+      // B2 anomaly: zero/negative weight passed buggy validator
+      const zeroWeight        = weightCheck.ok && Number(weight) <= 0;
+      // B3 anomaly: empty SCAC passed buggy validator
+      const emptyCarrier      = scacCheck.ok && scac.trim() === '';
+
+      if (zeroWeight) {
+        emitMetric('load_create_validation_failure', { error_code: 'CARRIER_RATE_FAILED', bug: 'b2' });
+        toast('Carrier rate calculation failed — zero-weight loads cannot be priced. Our team has been alerted.', 'warn');
+        // Populate review panel anyway to show the bad data reached step 3
+        populateReview(scac, weight, originZip, destZip, pickupDate);
+        showStep(3);
+        return;
+      }
+
+      if (emptyCarrier) {
+        emitMetric('load_create_validation_failure', { error_code: 'CARRIER_LOOKUP_FAILED', bug: 'b3' });
+        toast('Carrier lookup failed — empty SCAC not found in network. Our team has been alerted.', 'warn');
+        populateReview(scac, weight, originZip, destZip, pickupDate);
+        showStep(3);
+        return;
+      }
+
+      const failed = [scacCheck, weightCheck, ozCheck, dzCheck, pdCheck].find(c => !c.ok);
+      if (failed) {
+        emitMetric('load_create_client_rejection', { code: failed.code });
+        return showError('step-2', `Please fix: ${failed.field} (${failed.code}).`);
+      }
+
+      populateReview(scac, weight, originZip, destZip, pickupDate);
+      showStep(3);
+    };
+
+    document.getElementById('step-2-back').onclick = () => showStep(1);
+
+    function populateReview(scac, weight, originZip, destZip, pickupDate) {
+      document.getElementById('review-po').textContent        = document.getElementById('load-po-number').value;
+      document.getElementById('review-shipper').textContent   = document.getElementById('load-shipper').value;
+      document.getElementById('review-consignee').textContent = document.getElementById('load-consignee').value;
+      document.getElementById('review-scac').textContent      = scac.toUpperCase() || '—';
+      document.getElementById('review-weight').textContent    = weight ? Number(weight).toLocaleString() + ' lbs' : '—';
+      document.getElementById('review-route').textContent     = `${originZip} → ${destZip}`;
+      document.getElementById('review-pickup').textContent    = pickupDate;
+      document.getElementById('review-commodity').textContent = document.getElementById('load-commodity').value;
+    }
+
+    // ──────────────────── Step 3 ────────────────────
+    document.getElementById('step-3-dispatch').onclick = () => {
+      const loadId = 'LD-' + String(Date.now()).slice(-8);
+      document.getElementById('success-load-id').textContent = loadId;
+      document.getElementById('new-load-id').textContent = loadId;
+      document.getElementById('new-load-route').textContent =
+        (document.getElementById('load-origin-zip').value || '—') + ' → ' +
+        (document.getElementById('load-dest-zip').value   || '—');
+      document.getElementById('new-load-meta').textContent =
+        (document.getElementById('load-scac').value.toUpperCase() || 'UNKN') + ' · ' +
+        (document.getElementById('load-weight').value || '?') + ' lbs · ' +
+        (document.getElementById('load-po-number').value || '—');
+      emitMetric('load_create_completed');
+      showStep('done');
+    };
+    document.getElementById('step-3-back').onclick = () => showStep(2);
+
+    document.getElementById('goto-dashboard').onclick = () => {
+      closeModal();
+      document.getElementById('view-landing').hidden  = true;
+      document.getElementById('view-dashboard').hidden = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    document.getElementById('dashboard-signout').onclick = () => {
+      document.getElementById('view-dashboard').hidden = true;
+      document.getElementById('view-landing').hidden   = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // ──────────────────── Bug toggles ────────────────────
+    function updatePillDot() {
+      const anyOn = useB1 || useB2 || useB3;
+      document.getElementById('demo-pill-dot').className =
+        anyOn ? 'w-2 h-2 bg-rose-400 rounded-full animate-pulse'
+              : 'w-2 h-2 bg-emerald-400 rounded-full';
+      const bugsOn = [useB1 && 'B1', useB2 && 'B2', useB3 && 'B3'].filter(Boolean);
+      document.getElementById('validator-version').textContent =
+        bugsOn.length ? 'BUGGY (' + bugsOn.join('+') + ')' : 'v1.0.0-buggy';
+    }
+
+    document.getElementById('toggle-b1').onclick = () => {
+      useB1 = !useB1;
+      document.getElementById('b1-state-label').textContent =
+        useB1 ? 'BUGGY · PO regex * (empty segment passes)' : 'FIXED · PO regex +';
+      emitMetric('bug_toggle', { bug: 'b1_create_load_po', state: useB1 });
+      updatePillDot();
+      toast(useB1
+        ? 'Bug B1 ON — PO "PO--XXXXXXXX" will pass validation → ERP_PO_LINKAGE_FAILED'
+        : 'Bug B1 OFF — PO validation fixed.', useB1 ? 'warn' : 'success');
+    };
+
+    document.getElementById('toggle-b2').onclick = () => {
+      useB2 = !useB2;
+      document.getElementById('b2-state-label').textContent =
+        useB2 ? 'BUGGY · weight 0 passes (no n≤0 guard)' : 'FIXED · weight > 0';
+      emitMetric('bug_toggle', { bug: 'b2_register_load_weight', state: useB2 });
+      updatePillDot();
+      toast(useB2
+        ? 'Bug B2 ON — weight "0" will pass validation → CARRIER_RATE_FAILED'
+        : 'Bug B2 OFF — weight validation fixed.', useB2 ? 'warn' : 'success');
+    };
+
+    document.getElementById('toggle-b3').onclick = () => {
+      useB3 = !useB3;
+      document.getElementById('b3-state-label').textContent =
+        useB3 ? 'BUGGY · SCAC regex * (empty passes)' : 'FIXED · SCAC {2,4}';
+      emitMetric('bug_toggle', { bug: 'b3_register_load_carrier', state: useB3 });
+      updatePillDot();
+      toast(useB3
+        ? 'Bug B3 ON — empty SCAC "" will pass validation → CARRIER_LOOKUP_FAILED'
+        : 'Bug B3 OFF — SCAC validation fixed.', useB3 ? 'warn' : 'success');
+    };
+
+    document.getElementById('demo-pill-toggle').onclick = () => {
+      const body = document.getElementById('demo-pill-body');
+      body.hidden = !body.hidden;
+      document.getElementById('demo-pill-toggle').textContent = body.hidden ? '▴' : '▾';
+    };
+
+    // ──────────────────── Status bar / metrics polling ────────────────────
+    async function refreshStatus(force) {
+      try {
+        if (location.protocol === 'file:' || !location.hostname) return;
+        const r = await fetch('/metrics', { cache: 'no-store' });
+        if (!r.ok) return;
+        const text = await r.text();
+        let attempts = 0, failures = 0;
+        for (const line of text.split('\n')) {
+          if (line.startsWith('#') || !line.trim()) continue;
+          if (line.includes('freightops_load_create_attempts_total')) {
+            const v = parseFloat(line.split(' ').pop());
+            if (!isNaN(v)) attempts += v;
+          } else if (line.includes('freightops_load_create_validation_failures_total')) {
+            const v = parseFloat(line.split(' ').pop());
+            if (!isNaN(v)) failures += v;
+          }
+        }
+        const rate = attempts > 0 ? failures / attempts : 0;
+        const bar  = document.getElementById('status-bar');
+        const dot  = document.getElementById('status-bar-dot');
+        const detail = document.getElementById('status-bar-detail');
+        let cls, msg, sub;
+        if (rate >= 0.10) {
+          cls = ['bg-rose-50','border-rose-200','text-rose-900','text-rose-600'];
+          msg = 'Sev2 · load validation failure rate exceeded threshold';
+          sub = `Failure rate ${(rate*100).toFixed(1)}% &gt; 10% · alert dispatched to NexAI Manager`;
+          document.getElementById('dashboard-exceptions').textContent = failures;
+        } else if (rate >= 0.03) {
+          cls = ['bg-amber-50','border-amber-200','text-amber-900','text-amber-600'];
+          msg = 'Elevated failure rate · investigating';
+          sub = `Failure rate ${(rate*100).toFixed(1)}% · below alert threshold`;
+        } else {
+          cls = ['bg-emerald-50','border-emerald-200','text-emerald-900','text-emerald-600'];
+          msg = 'All systems operational';
+          sub = `${attempts} attempts / 5 min · no anomalies · auto-refresh 10s`;
+        }
+        bar.className = `${cls[0]} border-b ${cls[1]} ${cls[2]} text-xs`;
+        dot.className = `status-dot ${cls[3]} font-medium`;
+        dot.textContent = msg;
+        detail.innerHTML = sub;
+        if (force) toast(`${msg} · rate ${(rate*100).toFixed(2)}%`, rate >= 0.10 ? 'error' : 'info');
+      } catch (_) {}
+    }
+
+    refreshStatus(false);
+    setInterval(() => refreshStatus(false), 10000);
+
+    // Build SHA placeholder
+    fetch('/build-info.json').then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.sha) document.getElementById('build-sha').textContent = d.sha.slice(0,7); })
+      .catch(() => {});
+
+    document.getElementById('footer-status').onclick = (e) => { e.preventDefault(); refreshStatus(true); };
+  </script>
+</body>
+</html>

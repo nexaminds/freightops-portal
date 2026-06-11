@@ -1,0 +1,58 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+# Persist positions outside /tmp so they survive container restarts
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    batchwait: 1s
+    batchsize: 1048576
+    timeout: 10s
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+
+  - job_name: portal-app
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=loki"]
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        regex: '/?(.*)'
+        target_label: container
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: project
+      - source_labels: [__meta_docker_container_label_env]
+        target_label: env
+      - source_labels: [__meta_docker_container_label_app]
+        target_label: app
+    pipeline_stages:
+      # Extract corr_INC_* correlation IDs from log lines
+      - regex:
+          expression: '(?P<corr_id>corr_INC_[A-Za-z0-9_]+)'
+      - labels:
+          corr_id:
+      # Parse JSON log lines if present
+      - json:
+          expressions:
+            level:    level
+            msg:      msg
+            ts:       ts
+      - labels:
+          level:
+      - timestamp:
+          source: ts
+          format: RFC3339Nano
+          action_on_failure: skip
