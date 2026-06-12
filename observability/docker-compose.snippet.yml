@@ -41,7 +41,7 @@ services:
       APP_ENV:  "prod"
       SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
       SLACK_CHANNEL:   "${SLACK_CHANNEL:-}"
-      PLAYBOOK_PATH:   "demo/logistics/playbooks/incident-response-v1.md"
+      PLAYBOOK_PATH:   "/mnt/c/Users/Bernardo/nexai-framework/demo/logistics/playbooks/incident-response-v1.md"
     depends_on:
       - prometheus
     networks:
