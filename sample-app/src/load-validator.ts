@@ -75,14 +75,16 @@ export function validateConsigneeName(value: string): ValidationResult {
 // field passes here and reaches the carrier-lookup service downstream,
 // which rejects it with CARRIER_LOOKUP_FAILED.
 // FIX: change * to {2,4}.
-const SCAC_REGEX = /^[A-Z]*$/;
+const SCAC_REGEX = /^[A-Z]{2,4}$/;
 
 export function validateCarrierSCAC(value: string): ValidationResult {
   if (value === undefined || value === null) {
     return { ok: false, code: "CARRIER_REQUIRED", field: "carrier_scac" };
   }
-  const scac = value.trim().toUpperCase();
-  if (!SCAC_REGEX.test(scac)) {
+  if (value.trim().length === 0) {
+    return { ok: false, code: "CARRIER_INVALID_FORMAT", field: "carrier_scac" };
+  }
+  if (!SCAC_REGEX.test(value)) {
     return { ok: false, code: "CARRIER_INVALID_FORMAT", field: "carrier_scac" };
   }
   return { ok: true };
