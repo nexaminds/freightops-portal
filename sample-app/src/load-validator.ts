@@ -19,13 +19,11 @@ export type ValidationResult =
 // ------------------------------------------------------------------
 
 // PO number format: PO-{CUSTOMER_CODE}-{SEQUENCE}
-// Examples: PO-ACME-00012345  PO-BIGCO-0001
+// Examples: PO-ACME-00012345  PO-BIGCO-A1B2C3D4
 //
-// BUG B1: * (zero-or-more) allows an empty customer-code segment, so
-// "PO--00001234" passes here and reaches ERP PO linkage downstream,
-// which rejects it with ERP_PO_LINKAGE_FAILED.
-// FIX: change * to + (one-or-more).
-const PO_REGEX = /^PO-[A-Z0-9]*-\d{4,8}$/;
+// B1 guard: require a non-empty alphanumeric customer-code segment so
+// malformed POs fail before ERP linkage.
+const PO_REGEX = /^PO-[A-Z0-9]+-[A-Z0-9]{4,8}$/;
 
 export function validatePONumber(value: string): ValidationResult {
   if (value === undefined || value === null) {
