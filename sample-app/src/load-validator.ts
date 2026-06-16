@@ -25,7 +25,7 @@ export type ValidationResult =
 // "PO--00001234" passes here and reaches ERP PO linkage downstream,
 // which rejects it with ERP_PO_LINKAGE_FAILED.
 // FIX: change * to + (one-or-more).
-const PO_REGEX = /^PO-[A-Z0-9]*-\d{4,8}$/;
+const PO_REGEX = /^PO-[A-Z0-9]+-[A-Z0-9]{4,8}$/;
 
 export function validatePONumber(value: string): ValidationResult {
   if (value === undefined || value === null) {
