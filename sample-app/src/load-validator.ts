@@ -99,7 +99,9 @@ export function validateLoadWeight(value: string): ValidationResult {
   // BUG B2: missing n <= 0 guard. Weight "0" (zero lbs) is truthy so the
   // !value check above passes; isNaN(0) is false so this check passes too.
   // Zero-weight loads reach carrier rate calculation → CARRIER_RATE_FAILED.
-  // FIX: add:  if (n <= 0) return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE", ... }
+  if (!(n > 0)) {
+    return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE", field: "weight_lbs" };
+  }
   if (n > 80000) {
     return { ok: false, code: "WEIGHT_EXCEEDS_LIMIT", field: "weight_lbs" };
   }
