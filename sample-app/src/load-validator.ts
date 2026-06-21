@@ -75,7 +75,7 @@ export function validateConsigneeName(value: string): ValidationResult {
 // field passes here and reaches the carrier-lookup service downstream,
 // which rejects it with CARRIER_LOOKUP_FAILED.
 // FIX: change * to {2,4}.
-const SCAC_REGEX = /^[A-Z]*$/;
+const SCAC_REGEX = /^[A-Z]+$/;
 
 export function validateCarrierSCAC(value: string): ValidationResult {
   if (value === undefined || value === null) {
