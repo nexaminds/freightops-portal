@@ -107,13 +107,31 @@ export function validateDestinationZip(value: string): ValidationResult {
   return { ok: true };
 }
 
+function parsePickupDate(value: string): Date {
+  const trimmed = value.trim();
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!dateOnly) {
+    return new Date(trimmed);
+  }
+
+  const [, year, month, day] = dateOnly;
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 export function validatePickupDate(value: string): ValidationResult {
   if (!value) {
     return { ok: false, code: "PICKUP_DATE_REQUIRED", field: "pickup_date" };
   }
-  const d = new Date(value);
+  const d = parsePickupDate(value);
   if (isNaN(d.getTime())) {
     return { ok: false, code: "PICKUP_DATE_INVALID", field: "pickup_date" };
+  }
+  if (startOfLocalDay(d) < startOfLocalDay(new Date())) {
+    return { ok: false, code: "PICKUP_DATE_IN_PAST", field: "pickup_date" };
   }
   return { ok: true };
 }

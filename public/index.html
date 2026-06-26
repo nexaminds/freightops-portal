@@ -571,9 +571,18 @@ function validateZip(v, codePrefix, field) {
 }
 function validateOriginZip(v)      { return validateZip(v, 'ORIGIN_ZIP', 'origin_zip'); }
 function validateDestinationZip(v) { return validateZip(v, 'DEST_ZIP', 'destination_zip'); }
+function parsePickupDate(v) {
+  const trimmed = String(v).trim();
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!dateOnly) return new Date(trimmed);
+  return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+}
+function startOfLocalDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function validatePickupDate(v) {
   if (!v) return { ok:false, code:'PICKUP_DATE_REQUIRED', field:'pickup_date' };
-  if (isNaN(new Date(v).getTime())) return { ok:false, code:'PICKUP_DATE_INVALID', field:'pickup_date' };
+  const d = parsePickupDate(v);
+  if (isNaN(d.getTime())) return { ok:false, code:'PICKUP_DATE_INVALID', field:'pickup_date' };
+  if (startOfLocalDay(d) < startOfLocalDay(new Date())) return { ok:false, code:'PICKUP_DATE_IN_PAST', field:'pickup_date' };
   return { ok:true };
 }
 // expose for browser-based test harnesses
@@ -770,6 +779,7 @@ const FIELD_MSGS = {
   ORIGIN_ZIP_REQUIRED:'Origin ZIP is required.', ORIGIN_ZIP_INVALID:'Use 5-digit ZIP or ZIP+4.',
   DEST_ZIP_REQUIRED:'Destination ZIP is required.', DEST_ZIP_INVALID:'Use 5-digit ZIP or ZIP+4.',
   PICKUP_DATE_REQUIRED:'Pickup date is required.', PICKUP_DATE_INVALID:'Invalid date.',
+  PICKUP_DATE_IN_PAST:'Pickup date cannot be in the past.',
 };
 function mark(fieldId, msgId, result) {
   const f = document.getElementById(fieldId), m = document.getElementById(msgId);
