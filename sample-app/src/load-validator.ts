@@ -3,11 +3,6 @@
  * Module: validators/load
  *
  * Used by the /create-load endpoint (Step 1 — PO Details, Step 2 — Load Details).
- * Three known bugs are tracked as open incidents:
- *
- *   B1 (create-load)    PO_REGEX uses * so "PO--XXXXXXXX" passes → ERP_PO_LINKAGE_FAILED
- *   B2 (register-load)  validateLoadWeight missing n <= 0 guard → CARRIER_RATE_FAILED
- *   B3 (register-load)  SCAC_REGEX uses * so "" passes → CARRIER_LOOKUP_FAILED
  */
 
 export type ValidationResult =
@@ -20,11 +15,6 @@ export type ValidationResult =
 
 // PO number format: PO-{CUSTOMER_CODE}-{SEQUENCE}
 // Examples: PO-ACME-00012345  PO-BIGCO-0001
-//
-// BUG B1: * (zero-or-more) allows an empty customer-code segment, so
-// "PO--00001234" passes here and reaches ERP PO linkage downstream,
-// which rejects it with ERP_PO_LINKAGE_FAILED.
-// FIX: change * to + (one-or-more).
 const PO_REGEX = /^PO-[A-Z0-9]*-\d{4,8}$/;
 
 export function validatePONumber(value: string): ValidationResult {
@@ -70,11 +60,6 @@ export function validateConsigneeName(value: string): ValidationResult {
 
 // SCAC code format: 2–4 uppercase letters (NMFC / NPTC standard).
 // Examples: UPSF  FXFE  UP  RDWY
-//
-// BUG B3: * (zero-or-more) allows an empty SCAC "", so an empty carrier
-// field passes here and reaches the carrier-lookup service downstream,
-// which rejects it with CARRIER_LOOKUP_FAILED.
-// FIX: change * to {2,4}.
 const SCAC_REGEX = /^[A-Z]*$/;
 
 export function validateCarrierSCAC(value: string): ValidationResult {
@@ -96,10 +81,6 @@ export function validateLoadWeight(value: string): ValidationResult {
   if (isNaN(n)) {
     return { ok: false, code: "WEIGHT_INVALID", field: "weight_lbs" };
   }
-  // BUG B2: missing n <= 0 guard. Weight "0" (zero lbs) is truthy so the
-  // !value check above passes; isNaN(0) is false so this check passes too.
-  // Zero-weight loads reach carrier rate calculation → CARRIER_RATE_FAILED.
-  // FIX: add:  if (n <= 0) return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE", ... }
   if (n > 80000) {
     return { ok: false, code: "WEIGHT_EXCEEDS_LIMIT", field: "weight_lbs" };
   }

@@ -14,7 +14,7 @@ freightops-portal/
 │   └── package.json
 ├── sample-app/              # TypeScript validators + regression tests
 │   ├── src/
-│   │   ├── load-validator.ts   ← THREE intentional bugs live here
+│   │   ├── load-validator.ts
 │   │   └── load-handler.ts
 │   └── tests/
 │       ├── baseline-validators.spec.ts
@@ -31,17 +31,17 @@ freightops-portal/
         └── datasources/{prometheus,loki}.yml
 ```
 
-## The three intentional bugs
+## Known-defect policy
 
-| ID | Name                | File                          | Buggy code                   | Correct code         | Downstream failure        |
-|----|---------------------|-------------------------------|------------------------------|----------------------|---------------------------|
-| B1 | Create Load PO      | `sample-app/src/load-validator.ts` | `PO_REGEX = /^PO-[A-Z0-9]*-\d{4,8}$/` | `[A-Z0-9]+` | `ERP_PO_LINKAGE_FAILED`   |
-| B2 | Register Load Weight| `sample-app/src/load-validator.ts` | missing `n <= 0` guard  | add guard before `n > 80000` | `CARRIER_RATE_FAILED`     |
-| B3 | Register Load Carrier| `sample-app/src/load-validator.ts`| `SCAC_REGEX = /^[A-Z]*$/` | `/^[A-Z]{2,4}$/`     | `CARRIER_LOOKUP_FAILED`   |
+This app intentionally carries latent validation / business-logic defects so the
+incident-response pipeline has real failures to detect, triage, and fix. The
+defects are deliberately **not catalogued here** — they are meant to be discovered
+from telemetry (the elevated `error_code`) and located by reading the code, exactly
+as a real on-call engineer would.
 
-**Do NOT fix these bugs** unless you are the NexAI Fullstack agent acting under
-an active incident correlation ID (`corr_INC_*`). They are intentional and the
-incident detection pipeline depends on them being present in the baseline code.
+**Do NOT modify validators or business logic** unless you are the NexAI Fullstack
+agent acting under an active incident correlation ID (`corr_INC_*`). Fixing a defect
+outside an active incident breaks the detection pipeline.
 
 ## Running tests
 
@@ -51,9 +51,8 @@ npm install
 npm test
 ```
 
-Regression tests for B1/B2/B3 **deliberately fail** on the current (buggy)
-codebase. They pass only after the corresponding bug is fixed. This is
-intentional — the tests document correct post-fix behaviour.
+Some regression tests **deliberately fail** on the current codebase and pass only
+after the corresponding defect is fixed — they document correct post-fix behaviour.
 
 ## Running the portal
 
@@ -83,8 +82,8 @@ docker compose -f observability/docker-compose.snippet.yml up -d
 2. Webhook hits `POST /grafana-webhook` on the portal → forwarded to Slack async.
 3. Slack message pings `@nexai-manager` to initiate incident triage.
 4. NexAI Manager creates `corr_INC_*` correlation ID, assigns SRE / Fullstack / SDET.
-5. NexAI SRE triages Prometheus metrics to identify which error code is elevated.
-6. NexAI Fullstack locates the bug in `load-validator.ts` and opens a fix PR.
+5. NexAI SRE triages metrics to identify which error code is elevated, then reads the code to find the root cause.
+6. NexAI Fullstack implements the fix and opens a PR.
 7. NexAI SDET writes a regression test in `sample-app/tests/regression-<corr>.spec.ts`.
 8. NexAI Manager writes a postmortem in `incidents/<corr_id>/`.
 
@@ -103,12 +102,11 @@ All metrics are prefixed `freightops_`:
 ## Demo flow
 
 1. Open http://localhost:8080.
-2. In the **Bug controls** pill (bottom-right), toggle **B1** ON.
-3. Click **Create Load**, enter PO `PO--00001234` (empty customer segment).
-4. Step 2 will pass B1's buggy regex and proceed — the browser emits
-   `ERP_PO_LINKAGE_FAILED` to `/events`.
-5. Watch Prometheus at http://localhost:9094 — the failure counter rises.
-6. Within ~90 seconds Grafana fires the alert. Check http://localhost:3001.
+2. Submit loads through the Create Load flow with inputs that pass client validation
+   but break downstream — the portal emits a `load_create_validation_failure` with
+   the relevant `error_code` to `/events`.
+3. Watch Prometheus at http://localhost:9094 — the failure counter rises.
+4. Within ~90 seconds the failure-rate alert fires and the incident pipeline takes over.
 
 ## Architecture notes
 

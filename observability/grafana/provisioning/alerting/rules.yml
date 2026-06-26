@@ -51,8 +51,7 @@ groups:
       team: freight-engineering
     annotations:
       summary: FreightOps load validation failure rate exceeded 10%
-      description: 'Failure ratio {{ $values.C.Value }} exceeded the 0.10 threshold. Likely cause: active
-        bug toggle (B1 PO regex, B2 weight zero, or B3 empty SCAC).'
+      description: 'Failure ratio {{ $values.C.Value }} exceeded the 0.10 threshold for load creation.'
       runbook_url: http://localhost:3000/d/freightops-loads?orgId=1
       dashboard_url: http://localhost:3000/d/freightops-loads?orgId=1
   - uid: frt-erp-po-linkage
@@ -99,12 +98,9 @@ groups:
       env: prod
       bug: b1_create_load_po
     annotations:
-      summary: 'ERP PO linkage failures elevated (bug B1: PO regex *)'
-      description: 'PO numbers with empty customer-code segments (PO--XXXXXXXX) are passing client validation
-        and failing ERP linkage. Suspect: B1 PO_REGEX uses * quantifier instead of +. Fix: change /^PO-[A-Z0-9]*-/
-        to /^PO-[A-Z0-9]+-/.
-
-        '
+      summary: 'ERP PO linkage failures elevated'
+      description: 'Loads are passing client validation and then failing ERP PO linkage downstream,
+        emitting ERP_PO_LINKAGE_FAILED.'
       runbook_url: http://localhost:3000/d/freightops-loads?orgId=1
   - uid: frt-carrier-rate
     title: FreightOps · Carrier Rate Calculation Failures
@@ -150,12 +146,9 @@ groups:
       env: prod
       bug: b2_register_load_weight
     annotations:
-      summary: 'Carrier rate failures elevated (bug B2: zero-weight allowed)'
-      description: 'Loads with weight=0 or negative are passing client validation and failing carrier
-        rate calculation. Suspect: B2 validateLoadWeight missing n <= 0 guard. Fix: add `if (n <= 0) return
-        { ok: false, code: "WEIGHT_MUST_BE_POSITIVE" }`.
-
-        '
+      summary: 'Carrier rate failures elevated'
+      description: 'Loads are passing client validation and then failing carrier rate calculation
+        downstream, emitting CARRIER_RATE_FAILED.'
   - uid: frt-carrier-lookup
     title: FreightOps · Carrier Lookup Failures
     condition: C
@@ -200,8 +193,6 @@ groups:
       env: prod
       bug: b3_register_load_carrier
     annotations:
-      summary: 'Carrier SCAC lookup failures elevated (bug B3: empty SCAC allowed)'
-      description: 'Empty SCAC codes are passing client validation and failing carrier network lookup.
-        Suspect: B3 SCAC_REGEX uses * (zero-or-more) instead of {2,4}. Fix: change /^[A-Z]*$/ to /^[A-Z]{2,4}$/.
-
-        '
+      summary: 'Carrier SCAC lookup failures elevated'
+      description: 'Loads are passing client validation and then failing carrier network lookup
+        downstream, emitting CARRIER_LOOKUP_FAILED.'

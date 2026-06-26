@@ -535,7 +535,6 @@ function validatePONumber(v) {
   if (!v || !v.trim()) return { ok:false, code:'PO_REQUIRED', field:'po_number' };
   const po = v.trim().toUpperCase();
   if (po.length > 30) return { ok:false, code:'PO_TOO_LONG', field:'po_number' };
-  // B1: buggy regex uses * — empty customer segment "PO--00001234" passes
   const regex = useB1 ? /^PO-[A-Z0-9]*-\d{4,8}$/ : /^PO-[A-Z0-9]+-\d{4,8}$/;
   if (!regex.test(po)) return { ok:false, code:'PO_INVALID_FORMAT', field:'po_number' };
   return { ok:true };
@@ -553,7 +552,6 @@ function validateConsigneeName(v) {
 function validateCarrierSCAC(v) {
   if (v === undefined || v === null) return { ok:false, code:'CARRIER_REQUIRED', field:'carrier_scac' };
   const scac = v.trim().toUpperCase();
-  // B3: buggy regex uses * — empty SCAC "" passes
   const regex = useB3 ? /^[A-Z]*$/ : /^[A-Z]{2,4}$/;
   if (!regex.test(scac)) return { ok:false, code:'CARRIER_INVALID_FORMAT', field:'carrier_scac' };
   return { ok:true };
@@ -562,7 +560,6 @@ function validateLoadWeight(v) {
   if (!v && v !== 0) return { ok:false, code:'WEIGHT_REQUIRED', field:'weight_lbs' };
   const n = Number(v);
   if (isNaN(n)) return { ok:false, code:'WEIGHT_INVALID', field:'weight_lbs' };
-  // B2: buggy path skips the n <= 0 guard — weight "0" passes
   if (!useB2 && n <= 0) return { ok:false, code:'WEIGHT_MUST_BE_POSITIVE', field:'weight_lbs' };
   if (n > 80000) return { ok:false, code:'WEIGHT_EXCEEDS_LIMIT', field:'weight_lbs' };
   return { ok:true };
@@ -800,10 +797,9 @@ document.getElementById('next-1').onclick = () => {
     mark('f-consignee','m-consignee', rConsignee),
   ].every(Boolean);
 
-  // B1 downstream anomaly: empty customer segment passed the (buggy) validator → ERP linkage fails
   const emptyCustomer = /^PO--/.test(po.trim().toUpperCase());
   if (ok && emptyCustomer) {
-    emitMetric('load_create_validation_failure', { error_code: 'ERP_PO_LINKAGE_FAILED', bug: 'b1' });
+    emitMetric('load_create_validation_failure', { error_code: 'ERP_PO_LINKAGE_FAILED' });
     toast('ERP PO linkage failed — empty customer segment reached the ERP. Incident reported.', 'warn');
     setStep(2); return;
   }
@@ -836,21 +832,30 @@ document.getElementById('next-2').onclick = () => {
     mark('f-pickup','m-pickup', rPickup),
   ].every(Boolean);
 
-  const zeroWeight   = rWeight.ok && Number(weight) <= 0;   // B2 anomaly
-  const emptyCarrier = rScac.ok && scac.trim() === '';      // B3 anomaly
+  const pickup       = document.getElementById('f-pickup').value;
+  const zeroWeight   = rWeight.ok && Number(weight) <= 0;
+  const emptyCarrier = rScac.ok && scac.trim() === '';
+  const pastPickup   = rPickup.ok && new Date(pickup) < new Date(new Date().toDateString());
   const anomaly = document.getElementById('anomaly-3'); anomaly.hidden = true;
 
   if (ok && zeroWeight) {
-    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_RATE_FAILED', bug: 'b2' });
+    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_RATE_FAILED' });
     toast('Carrier rate calculation failed — zero-weight load cannot be priced. Incident reported.', 'warn');
     anomaly.innerHTML = '<strong>⚠ Downstream anomaly:</strong> zero-weight load passed validation and broke carrier rating. This event was reported to NexAI.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }
   if (ok && emptyCarrier) {
-    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_LOOKUP_FAILED', bug: 'b3' });
+    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_LOOKUP_FAILED' });
     toast('Carrier lookup failed — empty SCAC not found in network. Incident reported.', 'warn');
     anomaly.innerHTML = '<strong>⚠ Downstream anomaly:</strong> empty SCAC passed validation and failed network lookup. This event was reported to NexAI.';
+    anomaly.hidden = false;
+    fillReview(); setStep(3); return;
+  }
+  if (ok && pastPickup) {
+    emitMetric('load_create_validation_failure', { error_code: 'DISPATCH_TENDER_REJECTED' });
+    toast('Carrier dispatch rejected the load — pickup date is in the past and cannot be tendered. Incident reported.', 'warn');
+    anomaly.innerHTML = '<strong>⚠ Downstream anomaly:</strong> a load with a past pickup date passed validation and was rejected by carrier dispatch. This event was reported to NexAI.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }

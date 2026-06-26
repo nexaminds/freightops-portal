@@ -67,6 +67,7 @@ function initCounters() {
   loadCreateFailuresTotal.inc({ ...baseLabels, error_code: 'ERP_PO_LINKAGE_FAILED' }, 0);
   loadCreateFailuresTotal.inc({ ...baseLabels, error_code: 'CARRIER_RATE_FAILED' }, 0);
   loadCreateFailuresTotal.inc({ ...baseLabels, error_code: 'CARRIER_LOOKUP_FAILED' }, 0);
+  loadCreateFailuresTotal.inc({ ...baseLabels, error_code: 'DISPATCH_TENDER_REJECTED' }, 0);
 }
 
 initCounters();
@@ -88,6 +89,7 @@ app.get('/metrics', async (_req, res) => {
 // Whitelisted event types only — browser POSTs lifecycle events here.
 const ALLOWED_ERROR_CODES = new Set([
   'ERP_PO_LINKAGE_FAILED', 'CARRIER_RATE_FAILED', 'CARRIER_LOOKUP_FAILED',
+  'DISPATCH_TENDER_REJECTED',
 ]);
 const ALLOWED_STEPS = new Set(['1', '2', 'unknown']);
 const ALLOWED_BUGS  = new Set(['b1_create_load_po', 'b2_register_load_weight', 'b3_register_load_carrier']);
