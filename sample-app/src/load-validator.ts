@@ -78,8 +78,11 @@ export function validateLoadWeight(value: string): ValidationResult {
     return { ok: false, code: "WEIGHT_REQUIRED", field: "weight_lbs" };
   }
   const n = Number(value);
-  if (isNaN(n)) {
+  if (!Number.isFinite(n)) {
     return { ok: false, code: "WEIGHT_INVALID", field: "weight_lbs" };
+  }
+  if (n <= 0) {
+    return { ok: false, code: "WEIGHT_MUST_BE_POSITIVE", field: "weight_lbs" };
   }
   if (n > 80000) {
     return { ok: false, code: "WEIGHT_EXCEEDS_LIMIT", field: "weight_lbs" };
