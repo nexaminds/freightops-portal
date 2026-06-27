@@ -3,384 +3,423 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FreightOps TMS — Load Management</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%230f2440'/%3E%3Cpath d='M8 31h21v-13H8zM29 23h6l5 5v3h-11z' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linejoin='round'/%3E%3Ccircle cx='15' cy='33' r='3' fill='%23f97316'/%3E%3Ccircle cx='34' cy='33' r='3' fill='%23f97316'/%3E%3C/svg%3E" />
+  <title>FreightOps · Dispatch Terminal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='9' fill='%23070a10'/%3E%3Cpath d='M9 14l6 5-6 5' fill='none' stroke='%23ffb02e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='20' y='27' width='16' height='3.4' rx='1.7' fill='%2327e0a1'/%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            navy:   { 50:'#f4f7fc', 100:'#e7eef8', 200:'#cbdcef', 300:'#9fbfe0', 400:'#6593c4', 500:'#3c6aa0', 600:'#295189', 700:'#1c3d6c', 800:'#132a4d', 900:'#0b1c37', 950:'#060f22' },
-            accent: { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c', 700:'#c2410c' },
-            line:   '#e4ebf4',
-            inkmut: '#586a82',
-          },
-          fontFamily: {
-            sans:    ['Inter','system-ui','sans-serif'],
-            display: ['Sora','Inter','system-ui','sans-serif'],
-            mono:    ['JetBrains Mono','Menlo','monospace'],
-          },
-          boxShadow: {
-            card: '0 1px 2px rgba(11,28,55,.04), 0 6px 20px rgba(11,28,55,.06)',
-            pop:  '0 8px 12px rgba(11,28,55,.08), 0 24px 50px rgba(11,28,55,.20)',
-          },
-        }
-      }
-    }
+    tailwind.config = { theme: { extend: {
+      fontFamily: { mono:['JetBrains Mono','ui-monospace','monospace'], sans:['Inter','system-ui','sans-serif'] },
+    } } }
   </script>
   <style>
-    body { font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-           background:
-             radial-gradient(900px 460px at 88% -8%, rgba(249,115,22,.07), transparent 60%),
-             radial-gradient(820px 520px at -6% 110%, rgba(30,117,220,.08), transparent 55%),
-             linear-gradient(180deg,#f3f7fc 0%, #e9f0f9 100%);
+    :root{
+      --bg:#06090f; --bg2:#0a0e16; --panel:#0c111a; --panel2:#10151f; --raised:#141b27;
+      --line:#1a2330; --line2:#27323f; --linehot:rgba(255,176,46,.35);
+      --txt:#d7e2ee; --mut:#76859a; --dim:#475264;
+      --amber:#ffb02e; --amber-d:#f59415; --green:#27e0a1; --cyan:#3ad0e6;
+      --yellow:#f5d24a; --rose:#ff5d73; --blue:#5b9bff;
     }
-    [hidden] { display:none !important; }
-
-    /* display type — Sora for brand, headings & metrics */
-    h1, h2, h3, .display, [id^="kpi-"], [id^="health-"] .font-mono,
-    #topbar-title { font-family:'Sora','Inter',sans-serif; letter-spacing:-.018em; }
-    [id^="kpi-"] { font-feature-settings:"tnum"; }
-
-    /* selection + scrollbars */
-    ::selection { background:rgba(249,115,22,.22); }
-    main::-webkit-scrollbar, nav::-webkit-scrollbar { width:9px; }
-    main::-webkit-scrollbar-thumb, nav::-webkit-scrollbar-thumb { background:rgba(28,61,108,.18); border-radius:99px; border:2px solid transparent; background-clip:content-box; }
-    main::-webkit-scrollbar-thumb:hover { background:rgba(28,61,108,.32); background-clip:content-box; }
-
-    /* sidebar — deep gradient command surface w/ subtle grid + glow */
-    aside { position:relative; background:linear-gradient(176deg,#0a1730 0%, #060f22 62%, #050b1a 100%); }
-    aside::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:var(--bg); color:var(--txt); height:100vh; overflow:hidden;
+          font-family:'JetBrains Mono',ui-monospace,monospace; font-size:13px;
+          -webkit-font-smoothing:antialiased; display:flex; }
+    [hidden]{ display:none !important; }
+    /* ambient terminal texture: grid + amber vignette + scanlines */
+    body::before{ content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.9;
       background:
-        radial-gradient(420px 220px at 50% -4%, rgba(249,115,22,.13), transparent 70%),
-        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px) 0 0/100% 26px; }
-    aside > * { position:relative; }
+        radial-gradient(620px 320px at 14% -6%, rgba(255,176,46,.06), transparent 60%),
+        radial-gradient(700px 420px at 100% 110%, rgba(39,224,161,.05), transparent 60%),
+        linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px) 0 0/100% 30px,
+        linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px) 0 0/30px 100%; }
+    body::after{ content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.35;
+      background:repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,.18) 2px 3px); mix-blend-mode:multiply; }
+    aside, .mainwrap, #wizard, #chaos, #toasts { position:relative; z-index:1; }
 
-    /* sidebar nav */
-    .nav-item { position:relative; display:flex; align-items:center; gap:.7rem; padding:.6rem .8rem; border-radius:.65rem;
-                font-size:.85rem; font-weight:500; color:#b3c4da; transition:all .15s ease; cursor:pointer; }
-    .nav-item:hover { color:#fff; background:rgba(255,255,255,.055); }
-    .nav-item.active { color:#fff; background:linear-gradient(90deg, rgba(249,115,22,.20), rgba(249,115,22,.04)); }
-    .nav-item.active::before { content:""; position:absolute; left:-3px; top:18%; bottom:18%; width:3px; border-radius:99px;
-                               background:linear-gradient(#fb923c,#f97316); box-shadow:0 0 12px rgba(249,115,22,.6); }
-    .nav-item.active svg { color:#fb923c; }
-    .nav-item svg { width:18px; height:18px; flex-shrink:0; }
+    .mono{ font-family:'JetBrains Mono',monospace; }
+    .sans{ font-family:'Inter',sans-serif; }
+    .dim{ color:var(--mut); }
+    .small{ font-size:11px; }
+    .id{ color:var(--amber); font-weight:600; }
+    .id.big{ font-size:18px; letter-spacing:.02em; text-shadow:0 0 14px rgba(255,176,46,.35); }
+    .amber{ color:var(--amber); } .green{ color:var(--green); } .cyan{ color:var(--cyan); }
+    .yellow{ color:var(--yellow); } .rose{ color:var(--rose); }
+    .glow-a{ text-shadow:0 0 16px rgba(255,176,46,.45); }
+    .glow-g{ text-shadow:0 0 16px rgba(39,224,161,.45); }
+    .label{ font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--mut); }
+    .hr{ height:1px; background:var(--line); }
 
-    /* switch */
-    .switch { position:relative; width:34px; height:19px; flex-shrink:0; }
-    .switch input { opacity:0; width:0; height:0; }
-    .switch .track { position:absolute; inset:0; background:#34496a; border-radius:999px; transition:background .18s; cursor:pointer; }
-    .switch .track::after { content:""; position:absolute; top:2.5px; left:3px; width:14px; height:14px;
-                            background:#fff; border-radius:999px; transition:transform .18s; box-shadow:0 1px 2px rgba(0,0,0,.35); }
-    .switch input:checked + .track { background:#f43f5e; box-shadow:0 0 0 3px rgba(244,63,94,.18); }
-    .switch input:checked + .track::after { transform:translateX(14px); }
+    /* scrollbars */
+    ::-webkit-scrollbar{ width:10px; height:10px; }
+    ::-webkit-scrollbar-thumb{ background:#1f2a39; border-radius:0; border:3px solid transparent; background-clip:content-box; }
+    ::-webkit-scrollbar-thumb:hover{ background:#2c3a4d; background-clip:content-box; }
+    ::selection{ background:rgba(255,176,46,.28); color:#fff; }
 
-    /* wizard steps */
-    .wstep { width:27px; height:27px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-             font-size:.72rem; font-weight:700; transition:all .25s ease; }
-    .wstep-active  { background:linear-gradient(135deg,#295189,#1c3d6c); color:#fff; box-shadow:0 0 0 4px rgba(28,61,108,.16); }
-    .wstep-done    { background:linear-gradient(135deg,#fb923c,#ea580c); color:#fff; box-shadow:0 4px 10px rgba(249,115,22,.3); }
-    .wstep-pending { background:#e7eef8; color:#8295ac; }
+    /* ── sidebar ── */
+    aside{ width:236px; flex-shrink:0; background:linear-gradient(180deg,#0a0f18,#06090f);
+           border-right:1px solid var(--line); display:flex; flex-direction:column; }
+    .nav-item{ display:flex; align-items:center; gap:.6rem; padding:.5rem .7rem; margin:1px 0;
+               font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--mut);
+               cursor:pointer; position:relative; transition:all .12s; }
+    .nav-item svg{ width:16px; height:16px; flex-shrink:0; opacity:.8; }
+    .nav-item:hover{ color:var(--txt); background:rgba(255,255,255,.03); }
+    .nav-item.active{ color:var(--amber); background:linear-gradient(90deg,rgba(255,176,46,.12),transparent); }
+    .nav-item.active::before{ content:""; position:absolute; left:0; top:6px; bottom:6px; width:2px; background:var(--amber); box-shadow:0 0 10px var(--amber); }
+    .nav-item.active svg{ opacity:1; color:var(--amber); }
 
-    /* fields */
-    .fld { width:100%; border:1px solid #d6dfec; border-radius:.65rem; padding:.62rem .8rem; font-size:.88rem;
-           background:#fff; transition:border-color .14s, box-shadow .14s; }
-    .fld:hover { border-color:#bccbe0; }
-    .fld:focus { outline:none; border-color:#295189; box-shadow:0 0 0 3.5px rgba(41,81,137,.14); }
-    .fld.err { border-color:#f43f5e; box-shadow:0 0 0 3.5px rgba(244,63,94,.11); }
-    .fld-msg { display:none; font-size:.73rem; color:#e11d48; margin-top:.32rem; font-weight:500; }
-    .fld-msg.show { display:block; }
+    .btn-amber{ background:linear-gradient(135deg,var(--amber),var(--amber-d)); color:#1a1100; font-weight:700;
+                border:none; cursor:pointer; letter-spacing:.04em; text-transform:uppercase; transition:filter .12s, transform .12s;
+                box-shadow:0 0 0 1px rgba(255,176,46,.4), 0 6px 18px rgba(255,176,46,.22); }
+    .btn-amber:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+    .btn-ghost{ background:transparent; color:var(--txt); border:1px solid var(--line2); cursor:pointer;
+                letter-spacing:.04em; text-transform:uppercase; transition:all .12s; }
+    .btn-ghost:hover{ border-color:var(--amber); color:var(--amber); }
 
-    .chip { display:inline-flex; align-items:center; font-size:.7rem; font-weight:600; padding:.22rem .6rem;
-            border-radius:999px; white-space:nowrap; letter-spacing:.01em; }
+    /* live dot */
+    .sdot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--green); box-shadow:0 0 8px var(--green); }
+    .sdot.is-green{ background:var(--green); box-shadow:0 0 8px var(--green); }
+    .sdot.is-amber{ background:var(--yellow); box-shadow:0 0 8px var(--yellow); animation:blink 1.4s steps(2) infinite; }
+    .sdot.is-rose{ background:var(--rose); box-shadow:0 0 10px var(--rose); animation:blink 1s steps(2) infinite; }
+    @keyframes blink{ 50%{ opacity:.25 } }
+    .cursor{ display:inline-block; width:7px; height:13px; background:var(--amber); margin-left:3px; vertical-align:middle; animation:blink 1.1s steps(2) infinite; box-shadow:0 0 8px var(--amber); }
 
-    /* cards: subtle hover lift where opted-in */
-    .card-lift { transition:box-shadow .22s ease, transform .22s ease, border-color .22s ease; }
-    .card-lift:hover { box-shadow:0 8px 12px rgba(11,28,55,.08), 0 22px 44px rgba(11,28,55,.14); transform:translateY(-3px); border-color:#d4deec; }
-    #kpi-grid > div, #carriers-grid > div { transition:box-shadow .22s ease, transform .22s ease, border-color .22s ease; }
-    #kpi-grid > div:hover, #carriers-grid > div:hover { box-shadow:0 8px 12px rgba(11,28,55,.08), 0 22px 44px rgba(11,28,55,.14); transform:translateY(-3px); border-color:#d4deec; }
-    /* KPI metric numbers a touch larger + Sora */
-    #kpi-grid [id^="kpi-"] { font-size:2.1rem; }
+    /* ── panels / cells ── */
+    .panel{ background:var(--panel); border:1px solid var(--line); }
+    .cell{ background:var(--panel); border:1px solid var(--line); transition:border-color .18s, background .18s, transform .18s; }
+    .cell:hover{ border-color:var(--line2); }
+    .kpi{ background:var(--panel); border:1px solid var(--line); padding:16px 18px; position:relative; overflow:hidden; transition:border-color .18s, transform .18s; }
+    .kpi:hover{ border-color:var(--linehot); transform:translateY(-2px); }
+    .kpi::after{ content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--accentc,var(--amber)); opacity:.7; }
+    .kpi .num{ font-size:34px; font-weight:700; line-height:1; margin-top:10px; letter-spacing:-.01em; }
 
-    @keyframes toast-in { from { transform:translateY(14px); opacity:0 } to { transform:none; opacity:1 } }
-    .toast { animation:toast-in .22s ease-out; }
-    @keyframes pulse-dot { 0%,100% { opacity:1 } 50% { opacity:.35 } }
-    .pulse { animation:pulse-dot 1.6s ease-in-out infinite; }
-    @keyframes rise { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
-    .rise { animation:rise .4s cubic-bezier(.22,1,.36,1) both; }
-    .scrim { background:rgba(6,15,34,.55); backdrop-filter:blur(5px); }
+    /* ── chips ── */
+    .chip{ display:inline-flex; align-items:center; gap:.35em; font-size:10.5px; font-weight:600; letter-spacing:.05em;
+           text-transform:uppercase; padding:.18rem .5rem; border:1px solid transparent; white-space:nowrap; }
+    .chip::before{ content:"▮"; font-size:9px; opacity:.9; }
+    .chip--green{ color:var(--green); background:rgba(39,224,161,.10); border-color:rgba(39,224,161,.28); }
+    .chip--cyan{ color:var(--cyan); background:rgba(58,208,230,.10); border-color:rgba(58,208,230,.28); }
+    .chip--amber{ color:var(--amber); background:rgba(255,176,46,.10); border-color:rgba(255,176,46,.30); }
+    .chip--accent{ color:var(--amber); background:rgba(255,176,46,.14); border-color:rgba(255,176,46,.4); }
+    .chip--rose{ color:var(--rose); background:rgba(255,93,115,.12); border-color:rgba(255,93,115,.32); }
+    .chip--mut{ color:var(--mut); background:rgba(118,133,154,.10); border-color:rgba(118,133,154,.25); }
+    .chip--plain{ color:var(--mut); background:transparent; border-color:var(--line2); }
+    .chip--plain::before, .tag::before{ content:none; }
+    .tag{ display:inline-flex; align-items:center; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+          padding:.16rem .5rem; border:1px solid var(--line2); color:var(--mut); }
 
-    .tbl th { font-size:.67rem; text-transform:uppercase; letter-spacing:.08em; font-weight:600; color:#7e8da4;
-              padding:.65rem 1.1rem; text-align:left; border-bottom:1px solid #e4ebf4; background:#f7fafd; }
-    .tbl td { padding:.78rem 1.1rem; font-size:.85rem; border-bottom:1px solid #eef2f8; vertical-align:middle; }
-    .tbl tr:last-child td { border-bottom:none; }
-    .tbl tbody tr { transition:background .12s; }
-    .tbl tbody tr:hover { background:#f5f9fd; }
+    /* ── tables (data grid) ── */
+    .tbl{ width:100%; border-collapse:collapse; }
+    .tbl th{ font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--dim);
+             padding:.55rem .9rem; text-align:left; border-bottom:1px solid var(--line); background:var(--bg2); }
+    .tbl td{ padding:.6rem .9rem; font-size:12.5px; border-bottom:1px solid var(--line); vertical-align:middle; color:var(--txt); }
+    .tbl tbody tr{ position:relative; transition:background .1s; }
+    .tbl tbody tr:hover{ background:rgba(255,176,46,.04); }
+    .tbl tbody tr:hover td:first-child{ box-shadow:inset 2px 0 0 var(--amber); }
+    .tbl tr:last-child td{ border-bottom:none; }
+
+    /* ── carrier card ── */
+    .tcard{ background:var(--panel); border:1px solid var(--line); padding:16px; transition:border-color .18s, transform .18s; }
+    .tcard:hover{ border-color:var(--linehot); transform:translateY(-2px); }
+    .tcard-top{ display:flex; align-items:center; justify-content:space-between; }
+    .tcard-name{ font-family:'Inter',sans-serif; font-size:13px; color:var(--txt); margin-top:6px; }
+    .tcard-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-top:14px; background:var(--line); border:1px solid var(--line); }
+    .tcard-stats > div{ background:var(--panel2); padding:8px 6px; text-align:center; }
+    .tcard-stats .k{ display:block; font-size:9px; letter-spacing:.1em; color:var(--dim); text-transform:uppercase; }
+    .tcard-stats .v{ display:block; font-size:12px; color:var(--txt); margin-top:3px; }
+
+    /* ── ops health signal ── */
+    .hbar{ height:8px; background:#0c1119; border:1px solid var(--line); position:relative; overflow:hidden; }
+    .hbar-fill{ height:100%; width:0; background:var(--green); transition:width .7s ease; box-shadow:0 0 12px currentColor; }
+    .hbar-mark{ position:absolute; top:-3px; bottom:-3px; width:1px; background:var(--rose); left:40%; }
+    .logline{ display:flex; align-items:center; justify-content:space-between; font-size:11.5px; padding:2px 0; }
+
+    /* ── fields ── */
+    .fld{ width:100%; background:#0a0f18; border:1px solid var(--line2); color:var(--txt); padding:.55rem .7rem;
+          font-family:'JetBrains Mono',monospace; font-size:13px; transition:border-color .12s, box-shadow .12s; }
+    .fld::placeholder{ color:#3c4658; }
+    .fld:focus{ outline:none; border-color:var(--amber); box-shadow:0 0 0 1px var(--amber), 0 0 16px rgba(255,176,46,.18); }
+    .fld.err{ border-color:var(--rose); box-shadow:0 0 0 1px var(--rose); }
+    select.fld option{ background:#0a0f18; }
+    .fld-msg{ display:none; font-size:11px; color:var(--rose); margin-top:.3rem; }
+    .fld-msg.show{ display:block; }
+    .flbl{ display:block; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin-bottom:.4rem; }
+
+    /* ── wizard steps ── */
+    .wstep{ width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+            font-size:11px; font-weight:700; border:1px solid var(--line2); color:var(--mut); transition:all .2s; }
+    .wstep-active{ border-color:var(--amber); color:var(--amber); box-shadow:0 0 12px rgba(255,176,46,.3); background:rgba(255,176,46,.08); }
+    .wstep-done{ border-color:var(--green); color:#06090f; background:var(--green); box-shadow:0 0 12px rgba(39,224,161,.35); }
+    .wstep-pending{ border-color:var(--line2); color:var(--dim); }
+    .review{ border:1px solid var(--line); }
+    .rev-row{ display:flex; justify-content:space-between; padding:.5rem .9rem; border-bottom:1px solid var(--line); }
+    .rev-row:last-child{ border-bottom:none; }
+    .rev-row .k{ color:var(--mut); }
+    .term-alert{ border:1px solid rgba(255,93,115,.4); background:rgba(255,93,115,.08); color:#ffb3bf; padding:.6rem .8rem; font-size:12px; }
+    .term-note{ border:1px solid rgba(255,176,46,.4); background:rgba(255,176,46,.07); color:#ffd79a; padding:.6rem .8rem; font-size:12px; }
+
+    /* ── switch (fault toggle) ── */
+    .switch{ position:relative; width:36px; height:18px; flex-shrink:0; }
+    .switch input{ opacity:0; width:0; height:0; }
+    .switch .track{ position:absolute; inset:0; background:#0c1119; border:1px solid var(--line2); transition:.18s; cursor:pointer; }
+    .switch .track::after{ content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--mut); transition:.18s; }
+    .switch input:checked + .track{ border-color:var(--rose); box-shadow:0 0 10px rgba(255,93,115,.35); }
+    .switch input:checked + .track::after{ transform:translateX(18px); background:var(--rose); box-shadow:0 0 8px var(--rose); }
+    .bug-lbl{ font-size:10px; }
+    .bug-lbl.is-off{ color:var(--dim); }
+    .bug-lbl.is-on{ color:var(--rose); }
+    .cdot{ width:7px; height:7px; border-radius:50%; }
+    .cdot.is-off{ background:var(--green); box-shadow:0 0 8px var(--green); }
+    .cdot.is-on{ background:var(--rose); box-shadow:0 0 8px var(--rose); animation:blink 1s steps(2) infinite; }
+    .fbtn{ font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; padding:.28rem .6rem; border:1px solid var(--line2);
+           background:transparent; color:var(--mut); cursor:pointer; transition:all .12s; }
+    .fbtn:hover{ border-color:var(--line2); color:var(--txt); }
+    .fbtn.active{ border-color:var(--amber); color:var(--amber); background:rgba(255,176,46,.08); }
+
+    /* ── toasts ── */
+    .toast{ font-size:12px; padding:.6rem .8rem; background:var(--panel2); border:1px solid var(--line2); border-left-width:3px;
+            color:var(--txt); animation:toast-in .2s ease-out; max-width:340px; }
+    @keyframes toast-in{ from{ transform:translateX(-12px); opacity:0 } to{ transform:none; opacity:1 } }
+    .toast--info{ border-left-color:var(--blue); }
+    .toast--success{ border-left-color:var(--green); }
+    .toast--warn{ border-left-color:var(--amber); }
+    .toast--error{ border-left-color:var(--rose); }
+
+    .scrim{ background:rgba(3,6,11,.75); backdrop-filter:blur(3px); }
+    @keyframes rise{ from{ opacity:0; transform:translateY(8px) } to{ opacity:1; transform:none } }
+    .rise{ animation:rise .35s cubic-bezier(.2,1,.36,1) both; }
+    @keyframes pulse-dot{ 0%,100%{opacity:1} 50%{opacity:.4} }
+    .pulse{ animation:pulse-dot 1.5s ease-in-out infinite; }
   </style>
 </head>
-<body class="bg-navy-50 text-navy-900 h-screen overflow-hidden flex">
+<body>
 
-  <!-- Nexaminds mark sprite (reusable) -->
+  <!-- Nexaminds mark sprite -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
     <linearGradient id="nxg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1e75dc"/><stop offset=".42" stop-color="#159fbd"/>
-      <stop offset=".72" stop-color="#09d795"/><stop offset="1" stop-color="#00ff79"/>
+      <stop offset="0" stop-color="#3ad0e6"/><stop offset=".5" stop-color="#27e0a1"/><stop offset="1" stop-color="#27e0a1"/>
     </linearGradient>
     <symbol id="nx-mark" viewBox="0 0 183.55 257.06">
       <path fill="url(#nxg)" d="M59.06,236.06a15.83,15.83,0,0,1-4.4-10.1V198.4a13.33,13.33,0,0,0-4.86-9.54L4.86,156.17A13.3,13.3,0,0,1,0,146.63V68.89a13.88,13.88,0,0,1,4.75-9.68L80,1.09c2.61-2,4.75-1.15,4.75,1.93a53.54,53.54,0,0,1-1.54,11.42,12.16,12.16,0,0,1-1.52,6.26,39.21,39.21,0,0,1-7.9,8.2l-51.57,38a13.42,13.42,0,0,0-4.83,9.57v37.42a14.85,14.85,0,0,0,4.57,9.91l58.22,49.63a14.85,14.85,0,0,1,4.57,9.9v70.52c0,3.31-2,4.17-4.4,1.92Z"/>
       <path fill="url(#nxg)" d="M98.83,183.37a14.81,14.81,0,0,1,4.57-9.9l58.22-49.63a14.85,14.85,0,0,0,4.57-9.91V76.51a13.43,13.43,0,0,0-4.84-9.57l-51.57-38a39.14,39.14,0,0,1-7.89-8.2C100.2,18.15,98.83,6.11,98.83,3s2.14-4,4.75-1.94l75.21,58.12a13.85,13.85,0,0,1,4.76,9.68v77.74a13.3,13.3,0,0,1-4.86,9.54l-44.95,32.69a13.33,13.33,0,0,0-4.86,9.54V226a15.83,15.83,0,0,1-4.4,10.1l-21.25,19.75c-2.42,2.25-4.4,1.38-4.4-1.92Z"/>
     </symbol>
-    <symbol id="nx-mark-w" viewBox="0 0 183.55 257.06">
-      <path fill="#fff" d="M59.06,236.06a15.83,15.83,0,0,1-4.4-10.1V198.4a13.33,13.33,0,0,0-4.86-9.54L4.86,156.17A13.3,13.3,0,0,1,0,146.63V68.89a13.88,13.88,0,0,1,4.75-9.68L80,1.09c2.61-2,4.75-1.15,4.75,1.93a53.54,53.54,0,0,1-1.54,11.42,12.16,12.16,0,0,1-1.52,6.26,39.21,39.21,0,0,1-7.9,8.2l-51.57,38a13.42,13.42,0,0,0-4.83,9.57v37.42a14.85,14.85,0,0,0,4.57,9.91l58.22,49.63a14.85,14.85,0,0,1,4.57,9.9v70.52c0,3.31-2,4.17-4.4,1.92Z"/>
-      <path fill="#fff" d="M98.83,183.37a14.81,14.81,0,0,1,4.57-9.9l58.22-49.63a14.85,14.85,0,0,0,4.57-9.91V76.51a13.43,13.43,0,0,0-4.84-9.57l-51.57-38a39.14,39.14,0,0,1-7.89-8.2C100.2,18.15,98.83,6.11,98.83,3s2.14-4,4.75-1.94l75.21,58.12a13.85,13.85,0,0,1,4.76,9.68v77.74a13.3,13.3,0,0,1-4.86,9.54l-44.95,32.69a13.33,13.33,0,0,0-4.86,9.54V226a15.83,15.83,0,0,1-4.4,10.1l-21.25,19.75c-2.42,2.25-4.4,1.38-4.4-1.92Z"/>
-    </symbol>
   </defs></svg>
 
   <!-- ════════ SIDEBAR ════════ -->
-  <aside class="w-60 bg-navy-950 flex flex-col flex-shrink-0">
-    <!-- Logo -->
-    <div class="px-5 pt-6 pb-5 flex items-center gap-3">
-      <div class="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-           style="background:linear-gradient(140deg,#f97316,#ea580c);box-shadow:0 6px 16px rgba(249,115,22,.4), inset 0 1px 0 rgba(255,255,255,.35)">
-        <svg width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-          <path d="M8 31h21V18H8v13zM29 23h6.2l4.8 5v3H29v-8z" stroke="#fff" stroke-width="3" stroke-linejoin="round" fill="none"/>
-          <circle cx="15" cy="33.5" r="3.2" fill="#fff"/>
-          <circle cx="34" cy="33.5" r="3.2" fill="#fff"/>
-        </svg>
+  <aside>
+    <!-- brand -->
+    <div class="px-4 pt-5 pb-4" style="border-bottom:1px solid var(--line)">
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center justify-center" style="width:34px;height:34px;background:linear-gradient(135deg,var(--amber),var(--amber-d));box-shadow:0 0 16px rgba(255,176,46,.4)">
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M11 14l8 6-8 6" stroke="#1a1100" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="27.5" width="14" height="3.6" rx="1" fill="#1a1100"/></svg>
+        </div>
+        <div>
+          <div class="text-[15px] font-extrabold tracking-tight glow-a" style="color:var(--amber)">FREIGHTOPS</div>
+          <div class="label" style="font-size:8.5px">Dispatch Terminal</div>
+        </div>
       </div>
-      <div>
-        <div class="text-white font-display font-extrabold text-[16px] leading-none tracking-tight">FreightOps</div>
-        <div class="text-[9.5px] uppercase tracking-[.2em] text-navy-300 leading-none mt-1.5">TMS Platform</div>
+      <div class="flex items-center gap-2 mt-3.5 text-[10px]">
+        <span class="sdot is-green"></span>
+        <span class="dim">SESSION</span><span class="green">ONLINE</span>
+        <span class="cursor"></span>
       </div>
     </div>
 
-    <!-- Create load CTA -->
-    <div class="px-4 pb-4">
-      <button data-open-wizard class="w-full bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold rounded-lg py-2.5 flex items-center justify-center gap-2 transition-colors">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z"/></svg>
-        New Load
+    <!-- new load -->
+    <div class="px-3 py-3">
+      <button data-open-wizard class="btn-amber w-full py-2.5 text-[12px] flex items-center justify-center gap-2">
+        <span style="font-size:14px;line-height:1">＋</span> New Load
       </button>
     </div>
 
-    <!-- Nav -->
-    <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
+    <!-- nav -->
+    <nav class="flex-1 px-2 overflow-y-auto">
+      <div class="label px-2 pb-1.5 pt-1" style="font-size:9px">Operations</div>
       <div class="nav-item active" data-view="dashboard">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h6v6H3V3zm8 0h6v4h-6V3zM3 11h6v6H3v-6zm8-2h6v8h-6V9z" opacity=".9"/></svg>
-        Dashboard
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h6v6H3V3zm8 0h6v4h-6V3zM3 11h6v6H3v-6zm8-2h6v8h-6V9z"/></svg> Dashboard
       </div>
       <div class="nav-item" data-view="loads">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 5.5A1.5 1.5 0 013.5 4h8A1.5 1.5 0 0113 5.5V13H2V5.5zM13 8h2.6L18 10.5V13h-5V8z"/><circle cx="5.5" cy="14.6" r="1.6"/><circle cx="14.7" cy="14.6" r="1.6"/></svg>
-        Loads
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 5.5A1.5 1.5 0 013.5 4h8A1.5 1.5 0 0113 5.5V13H2V5.5zM13 8h2.6L18 10.5V13h-5V8z"/><circle cx="5.5" cy="14.6" r="1.6"/><circle cx="14.7" cy="14.6" r="1.6"/></svg> Loads
       </div>
       <div class="nav-item" data-view="carriers">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l7 3v5c0 4.2-2.9 6.9-7 8-4.1-1.1-7-3.8-7-8V5l7-3zm0 4a2.4 2.4 0 100 4.8A2.4 2.4 0 0010 6zm0 6c-1.9 0-3.6.8-4.3 2 .9 1.4 2.4 2.4 4.3 2.9 1.9-.5 3.4-1.5 4.3-2.9-.7-1.2-2.4-2-4.3-2z"/></svg>
-        Carriers
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l7 3v5c0 4.2-2.9 6.9-7 8-4.1-1.1-7-3.8-7-8V5l7-3zm0 4a2.4 2.4 0 100 4.8A2.4 2.4 0 0010 6z"/></svg> Carriers
       </div>
       <div class="nav-item" data-view="pos">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M5 2h10a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1zm2 4h6v1.5H7V6zm0 3.5h6V11H7V9.5zm0 3.5h4v1.5H7V13z"/></svg>
-        PO Tracking
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M5 2h10a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1zm2 4h6v1.5H7V6zm0 3.5h6V11H7V9.5zm0 3.5h4v1.5H7V13z"/></svg> PO Tracking
       </div>
-      <div class="nav-item opacity-45 cursor-not-allowed">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 16h3V8H3v8zm5.5 0h3V4h-3v12zM14 16h3v-6h-3v6z"/></svg>
-        Reports
-        <span class="ml-auto text-[9px] bg-navy-800 px-1.5 py-0.5 rounded text-navy-300">SOON</span>
+      <div class="nav-item" style="opacity:.4;cursor:not-allowed">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 16h3V8H3v8zm5.5 0h3V4h-3v12zM14 16h3v-6h-3v6z"/></svg> Reports
+        <span class="tag ml-auto" style="font-size:8px;padding:1px 5px">soon</span>
       </div>
     </nav>
 
-    <!-- System status -->
-    <div class="px-4 py-4 border-t border-navy-800">
-      <div class="flex items-center gap-2 text-xs">
-        <span id="sb-dot" class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span>
-        <span id="sb-text" class="text-navy-200 font-medium truncate">All systems operational</span>
+    <!-- system status -->
+    <div class="px-4 py-4" style="border-top:1px solid var(--line)">
+      <div class="flex items-center gap-2 text-[11px]">
+        <span id="sb-dot" class="sdot is-green"></span>
+        <span id="sb-text" class="truncate" style="color:var(--green)">ALL SYSTEMS NOMINAL</span>
       </div>
-      <div id="sb-sub" class="text-[10px] text-navy-400 mt-1 pl-4">failure rate 0.0% · auto-refresh 10s</div>
-      <div class="mt-3.5 pt-3 border-t border-navy-800/70 flex items-center gap-2.5">
-        <svg width="14" height="20" aria-hidden="true"><use href="#nx-mark"/></svg>
-        <div class="text-[10px] text-navy-500 leading-snug">
-          Monitored by <span class="text-white font-semibold">NexAI Agents</span><br>
-          by <span class="font-display font-semibold text-navy-200">Nexaminds</span> · streams to Prometheus
+      <div id="sb-sub" class="text-[10px] dim mt-1 pl-4">failrate 0.0% · refresh 10s</div>
+      <div class="mt-3 pt-3 flex items-center gap-2.5" style="border-top:1px solid var(--line)">
+        <svg width="13" height="18" aria-hidden="true"><use href="#nx-mark"/></svg>
+        <div class="text-[10px] dim leading-snug">
+          monitored by <span class="green">NEXAI AGENTS</span><br>by <span style="color:var(--txt)">NEXAMINDS</span>
         </div>
       </div>
     </div>
   </aside>
 
-  <!-- ════════ MAIN COLUMN ════════ -->
-  <div class="flex-1 flex flex-col min-w-0">
+  <!-- ════════ MAIN ════════ -->
+  <div class="mainwrap flex-1 flex flex-col min-w-0" style="background:var(--bg)">
 
-    <!-- Topbar -->
-    <header class="h-14 bg-white border-b border-line flex items-center gap-4 px-6 flex-shrink-0">
-      <h1 id="topbar-title" class="text-[15px] font-bold tracking-tight">Dashboard</h1>
-      <div class="flex-1 max-w-md ml-4 relative">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-inkmut" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.9 3.5l4.3 4.3a1 1 0 01-1.4 1.4l-4.3-4.3A6 6 0 012 8z"/></svg>
-        <input id="global-search" type="search" placeholder="Search loads, POs, carriers…"
-               class="w-full bg-navy-50 border border-transparent focus:border-navy-200 focus:bg-white rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none transition-colors" />
+    <!-- topbar / status line -->
+    <header class="flex items-center gap-4 px-5 flex-shrink-0" style="height:50px;border-bottom:1px solid var(--line);background:var(--bg2)">
+      <div class="flex items-center gap-2">
+        <span class="dim">~/freightops/</span><span id="topbar-title" class="amber" style="text-transform:lowercase">dashboard</span>
       </div>
-      <div class="ml-auto flex items-center gap-3">
-        <span class="chip bg-navy-100 text-navy-700 font-mono">PROD</span>
-        <span class="text-xs text-inkmut hidden lg:inline" id="topbar-clock"></span>
-        <div class="w-8 h-8 rounded-full bg-navy-600 text-white text-xs font-bold flex items-center justify-center" title="Dispatcher">BG</div>
+      <div class="flex-1 max-w-md relative">
+        <span class="absolute dim" style="left:10px;top:50%;transform:translateY(-50%)">›</span>
+        <input id="global-search" type="search" placeholder="search loads, pos, carriers…"
+               class="fld" style="padding-left:24px;height:32px" />
+      </div>
+      <div class="ml-auto flex items-center gap-3 text-[11px]">
+        <span class="tag" style="color:var(--green);border-color:rgba(39,224,161,.3)">● PROD</span>
+        <span class="dim hidden lg:inline" id="topbar-clock"></span>
+        <span class="flex items-center justify-center font-bold" style="width:28px;height:28px;border:1px solid var(--line2);color:var(--amber)">BG</span>
       </div>
     </header>
 
-    <!-- Content -->
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 overflow-y-auto" style="background:var(--bg)">
 
       <!-- ──────── DASHBOARD ──────── -->
-      <section id="view-dashboard" class="p-6 max-w-[1200px] mx-auto">
-        <!-- page hero -->
-        <div class="flex flex-wrap items-end justify-between gap-3 mb-5 rise">
+      <section id="view-dashboard" class="p-5 max-w-[1240px] mx-auto">
+        <!-- hero -->
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-4 rise">
           <div>
-            <h2 class="text-[22px] font-display font-extrabold tracking-tight leading-none">Operations Overview</h2>
-            <p class="text-sm text-inkmut mt-1.5">Live load pipeline, carrier network health, and downstream validation signal.</p>
+            <h2 class="text-[20px] font-bold tracking-tight">Operations Overview<span class="cursor"></span></h2>
+            <p class="dim text-[12px] mt-1">live load pipeline · carrier network · downstream validation signal</p>
           </div>
-          <span class="chip bg-emerald-100 text-emerald-700 gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse"></span> Telemetry live</span>
+          <span class="tag" style="color:var(--green);border-color:rgba(39,224,161,.3)"><span class="sdot is-green" style="margin-right:6px"></span>TELEMETRY LIVE</span>
         </div>
+
         <!-- KPI row -->
-        <div id="kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-white rounded-xl border border-line shadow-card p-5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] uppercase tracking-wider text-inkmut font-semibold">In Transit</span>
-              <svg class="w-4 h-4 text-navy-400" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5.5A1.5 1.5 0 013.5 4h8A1.5 1.5 0 0113 5.5V13H2V5.5zM13 8h2.6L18 10.5V13h-5V8z"/></svg>
-            </div>
-            <div class="text-3xl font-extrabold mt-2 tracking-tight" id="kpi-transit">0</div>
-            <div class="text-xs text-inkmut mt-1">active shipments</div>
+        <div id="kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="kpi" style="--accentc:var(--cyan)">
+            <div class="flex items-center justify-between"><span class="label">In Transit</span><span class="dim small">▲</span></div>
+            <div class="num cyan glow-g" id="kpi-transit">0</div>
+            <div class="dim small mt-1">active shipments</div>
           </div>
-          <div class="bg-white rounded-xl border border-line shadow-card p-5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] uppercase tracking-wider text-inkmut font-semibold">Pending</span>
-              <svg class="w-4 h-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4c0 .3.1.5.3.7l2.8 2.8a1 1 0 001.4-1.4L11 9.6V6z"/></svg>
-            </div>
-            <div class="text-3xl font-extrabold mt-2 tracking-tight" id="kpi-pending">0</div>
-            <div class="text-xs text-inkmut mt-1">awaiting carrier</div>
+          <div class="kpi" style="--accentc:var(--yellow)">
+            <div class="flex items-center justify-between"><span class="label">Pending</span><span class="dim small">◷</span></div>
+            <div class="num yellow" id="kpi-pending">0</div>
+            <div class="dim small mt-1">awaiting carrier</div>
           </div>
-          <div class="bg-white rounded-xl border border-line shadow-card p-5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] uppercase tracking-wider text-inkmut font-semibold">Delivered</span>
-              <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.7-9.3a1 1 0 00-1.4-1.4L9 10.6 7.7 9.3a1 1 0 00-1.4 1.4l2 2a1 1 0 001.4 0l4-4z"/></svg>
-            </div>
-            <div class="text-3xl font-extrabold mt-2 tracking-tight" id="kpi-delivered">0</div>
-            <div class="text-xs text-inkmut mt-1">this month</div>
+          <div class="kpi" style="--accentc:var(--green)">
+            <div class="flex items-center justify-between"><span class="label">Delivered</span><span class="dim small">✓</span></div>
+            <div class="num green glow-g" id="kpi-delivered">0</div>
+            <div class="dim small mt-1">this month</div>
           </div>
-          <div class="bg-white rounded-xl border border-line shadow-card p-5" id="kpi-exceptions-card">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] uppercase tracking-wider text-inkmut font-semibold">Exceptions</span>
-              <svg class="w-4 h-4 text-rose-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.3 3.2c.8-1.3 2.6-1.3 3.4 0l6 10.4c.8 1.3-.2 3-1.7 3H4c-1.5 0-2.5-1.7-1.7-3l6-10.4zM10 7a1 1 0 011 1v3a1 1 0 11-2 0V8a1 1 0 011-1zm0 8a1.2 1.2 0 100-2.4A1.2 1.2 0 0010 15z"/></svg>
-            </div>
-            <div class="text-3xl font-extrabold mt-2 tracking-tight" id="kpi-exceptions">0</div>
-            <div class="text-xs text-inkmut mt-1">downstream validation failures</div>
+          <div class="kpi" style="--accentc:var(--rose)" id="kpi-exceptions-card">
+            <div class="flex items-center justify-between"><span class="label">Exceptions</span><span class="rose small">⚠</span></div>
+            <div class="num rose" id="kpi-exceptions">0</div>
+            <div class="dim small mt-1">downstream failures</div>
           </div>
         </div>
 
-        <!-- Ops health + recent loads -->
-        <div class="grid lg:grid-cols-3 gap-4 mt-4">
-          <!-- Ops health -->
-          <div class="bg-white rounded-xl border border-line shadow-card p-5">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-bold">Ops Health</h3>
-              <span id="health-chip" class="chip bg-emerald-100 text-emerald-700">HEALTHY</span>
+        <!-- health + recent -->
+        <div class="grid lg:grid-cols-3 gap-3 mt-3">
+          <!-- ops health -->
+          <div class="panel p-4">
+            <div class="flex items-center justify-between mb-3.5">
+              <span class="label">Ops Signal</span>
+              <span id="health-chip" class="chip chip--green">HEALTHY</span>
             </div>
-            <div class="space-y-3.5 text-sm">
-              <div>
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="text-inkmut font-medium">Validation failure rate</span>
-                  <span id="health-rate" class="font-mono font-semibold">0.0%</span>
-                </div>
-                <div class="h-2 bg-navy-100 rounded-full overflow-hidden">
-                  <div id="health-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-700" style="width:0%"></div>
-                </div>
-                <div class="flex justify-between text-[10px] text-inkmut mt-1">
-                  <span>0%</span><span class="text-rose-500 font-semibold">alert @ 10%</span><span>25%</span>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-2 pt-2">
-                <div class="bg-navy-50 rounded-lg p-2.5">
-                  <div class="text-[10px] uppercase tracking-wide text-inkmut font-semibold">Attempts</div>
-                  <div class="font-mono font-bold text-lg" id="health-attempts">0</div>
-                </div>
-                <div class="bg-navy-50 rounded-lg p-2.5">
-                  <div class="text-[10px] uppercase tracking-wide text-inkmut font-semibold">Failures</div>
-                  <div class="font-mono font-bold text-lg" id="health-failures">0</div>
-                </div>
-              </div>
-              <div class="pt-1 space-y-1.5" id="health-codes"></div>
+            <div class="flex items-end justify-between mb-1">
+              <span class="dim text-[11px]">failure rate</span>
+              <span id="health-rate" class="text-[22px] font-bold green">0.0%</span>
             </div>
+            <div class="hbar"><div id="health-bar" class="hbar-fill"></div><span class="hbar-mark"></span></div>
+            <div class="flex justify-between text-[9px] dim mt-1"><span>0%</span><span class="rose">ALERT@10%</span><span>25%</span></div>
+            <div class="grid grid-cols-2 gap-1 mt-4" style="background:var(--line);border:1px solid var(--line)">
+              <div style="background:var(--panel2)" class="p-2.5"><div class="label" style="font-size:9px">Attempts</div><div class="text-[18px] font-bold mt-0.5" id="health-attempts">0</div></div>
+              <div style="background:var(--panel2)" class="p-2.5"><div class="label" style="font-size:9px">Failures</div><div class="text-[18px] font-bold mt-0.5 rose" id="health-failures">0</div></div>
+            </div>
+            <div class="label mt-4 mb-1.5" style="font-size:9px">Error stream</div>
+            <div id="health-codes" class="space-y-0.5"></div>
           </div>
 
-          <!-- Recent loads -->
-          <div class="lg:col-span-2 bg-white rounded-xl border border-line shadow-card overflow-hidden">
-            <div class="px-5 py-3.5 border-b border-line flex items-center justify-between">
-              <h3 class="text-sm font-bold">Recent Loads</h3>
-              <button class="text-xs text-navy-600 font-semibold hover:text-navy-800" data-view-link="loads">View all →</button>
+          <!-- recent loads -->
+          <div class="lg:col-span-2 panel">
+            <div class="px-4 py-3 flex items-center justify-between" style="border-bottom:1px solid var(--line)">
+              <span class="label">Recent Loads</span>
+              <button class="btn-ghost text-[10px] px-2.5 py-1" data-view-link="loads">view all →</button>
             </div>
-            <table class="w-full tbl">
+            <table class="tbl">
               <thead><tr><th>Load</th><th>Route</th><th>Carrier</th><th>Weight</th><th>Status</th></tr></thead>
               <tbody id="dash-loads-body"></tbody>
             </table>
           </div>
         </div>
 
-        <!-- Incident pipeline strip -->
-        <div class="mt-4 relative overflow-hidden rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center gap-5"
-             style="background:linear-gradient(120deg,#0b1c37 0%,#060f22 60%,#08182f 100%)">
-          <div aria-hidden="true" class="absolute inset-0 pointer-events-none"
-               style="background:radial-gradient(420px 200px at 12% -20%, rgba(249,115,22,.16), transparent 65%), radial-gradient(420px 220px at 100% 120%, rgba(0,255,121,.10), transparent 60%)"></div>
-          <div class="relative flex items-center gap-3.5 flex-shrink-0 lg:w-64">
-            <svg width="30" height="42" aria-hidden="true" class="flex-shrink-0"><use href="#nx-mark"/></svg>
-            <div>
-              <div class="text-[10px] uppercase tracking-[.16em] text-accent-400 font-bold">Autonomous Incident Response</div>
-              <div class="text-white font-display font-bold text-[15px] mt-1 leading-tight">Detect → Triage → Fix → Test → PR</div>
-              <div class="text-[11px] text-navy-300 mt-1">Powered by <span class="text-navy-100 font-semibold">NexAI Agents</span></div>
+        <!-- incident console -->
+        <div class="mt-3 relative overflow-hidden p-5" style="background:linear-gradient(120deg,#0a1018,#06090f);border:1px solid var(--line)">
+          <div aria-hidden="true" class="absolute inset-0 pointer-events-none" style="background:radial-gradient(360px 160px at 8% -30%,rgba(255,176,46,.12),transparent 60%),radial-gradient(360px 180px at 100% 130%,rgba(39,224,161,.10),transparent 60%)"></div>
+          <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
+            <div class="flex items-center gap-3.5 flex-shrink-0 lg:w-64">
+              <svg width="28" height="40" aria-hidden="true"><use href="#nx-mark"/></svg>
+              <div>
+                <div class="label" style="color:var(--amber)">Autonomous Incident Response</div>
+                <div class="text-[13px] font-bold mt-1">detect → triage → fix → test → PR</div>
+                <div class="text-[10px] dim mt-1">powered by <span class="green">NEXAI AGENTS</span></div>
+              </div>
             </div>
-          </div>
-          <div class="relative flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Mean detection</div><div class="text-white font-display font-bold text-lg mt-1 leading-none">&lt;90<span class="text-[11px] text-navy-300 font-sans font-medium ml-0.5">s</span></div></div>
-            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Mean fix PR</div><div class="text-white font-display font-bold text-lg mt-1 leading-none">&lt;5<span class="text-[11px] text-navy-300 font-sans font-medium ml-0.5">min</span></div></div>
-            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Regression tests</div><div class="text-white font-semibold text-[13px] mt-1.5 leading-none">auto-authored</div></div>
-            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Human gate</div><div class="text-white font-semibold text-[13px] mt-1.5 leading-none">review &amp; merge</div></div>
+            <div class="relative flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div class="cell p-3"><div class="dim text-[10px]">detect</div><div class="text-[17px] font-bold amber mt-1">&lt;90<span class="dim text-[10px] ml-0.5">s</span></div></div>
+              <div class="cell p-3"><div class="dim text-[10px]">fix PR</div><div class="text-[17px] font-bold amber mt-1">&lt;5<span class="dim text-[10px] ml-0.5">min</span></div></div>
+              <div class="cell p-3"><div class="dim text-[10px]">tests</div><div class="text-[12px] font-semibold green mt-1.5">auto-authored</div></div>
+              <div class="cell p-3"><div class="dim text-[10px]">gate</div><div class="text-[12px] font-semibold mt-1.5">review &amp; merge</div></div>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- ──────── LOADS ──────── -->
-      <section id="view-loads" hidden class="p-6 max-w-[1200px] mx-auto">
-        <div class="bg-white rounded-xl border border-line shadow-card overflow-hidden">
-          <div class="px-5 py-3.5 border-b border-line flex flex-wrap items-center gap-3">
-            <h3 class="text-sm font-bold">Load Board</h3>
+      <section id="view-loads" hidden class="p-5 max-w-[1240px] mx-auto">
+        <div class="panel">
+          <div class="px-4 py-3 flex flex-wrap items-center gap-2.5" style="border-bottom:1px solid var(--line)">
+            <span class="label">Load Board</span>
             <div class="flex gap-1.5 ml-2" id="load-filters">
-              <button class="chip bg-navy-700 text-white" data-filter="all">All</button>
-              <button class="chip bg-navy-100 text-navy-700 hover:bg-navy-200" data-filter="Dispatched">Dispatched</button>
-              <button class="chip bg-navy-100 text-navy-700 hover:bg-navy-200" data-filter="In Transit">In Transit</button>
-              <button class="chip bg-navy-100 text-navy-700 hover:bg-navy-200" data-filter="Pending">Pending</button>
-              <button class="chip bg-navy-100 text-navy-700 hover:bg-navy-200" data-filter="Delivered">Delivered</button>
+              <button class="fbtn active" data-filter="all">all</button>
+              <button class="fbtn" data-filter="Dispatched">dispatched</button>
+              <button class="fbtn" data-filter="In Transit">in transit</button>
+              <button class="fbtn" data-filter="Pending">pending</button>
+              <button class="fbtn" data-filter="Delivered">delivered</button>
             </div>
-            <button data-open-wizard class="ml-auto bg-navy-700 hover:bg-navy-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg">+ New Load</button>
+            <button data-open-wizard class="btn-amber ml-auto text-[10.5px] px-3 py-1.5">＋ New Load</button>
           </div>
-          <table class="w-full tbl">
+          <table class="tbl">
             <thead><tr><th>Load ID</th><th>PO Number</th><th>Route</th><th>Carrier</th><th>Weight</th><th>Pickup</th><th>Status</th></tr></thead>
             <tbody id="loads-body"></tbody>
           </table>
-          <div id="loads-empty" hidden class="py-14 text-center text-sm text-inkmut">No loads match your filter.</div>
+          <div id="loads-empty" hidden class="py-14 text-center dim text-[12px]">No loads match filter.</div>
         </div>
       </section>
 
       <!-- ──────── CARRIERS ──────── -->
-      <section id="view-carriers" hidden class="p-6 max-w-[1200px] mx-auto">
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="carriers-grid"></div>
-        <p class="text-xs text-inkmut mt-5 text-center">Carrier lookups resolve against SCAC codes (2–4 uppercase letters, NMFC standard). Invalid SCACs fail at the network-lookup gate.</p>
+      <section id="view-carriers" hidden class="p-5 max-w-[1240px] mx-auto">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3" id="carriers-grid"></div>
+        <p class="dim text-[11px] mt-5 text-center">Carrier lookups resolve against SCAC codes (2–4 uppercase letters). Invalid SCACs fail at the network-lookup gate.</p>
       </section>
 
       <!-- ──────── PO TRACKING ──────── -->
-      <section id="view-pos" hidden class="p-6 max-w-[1200px] mx-auto">
-        <div class="bg-white rounded-xl border border-line shadow-card overflow-hidden">
-          <div class="px-5 py-3.5 border-b border-line">
-            <h3 class="text-sm font-bold">Purchase Orders</h3>
-            <p class="text-xs text-inkmut mt-0.5">POs are linked to loads at creation. Format <code class="font-mono bg-navy-50 px-1 rounded">PO-{CUSTOMER}-{SEQ}</code> — the customer segment links to the ERP account.</p>
+      <section id="view-pos" hidden class="p-5 max-w-[1240px] mx-auto">
+        <div class="panel">
+          <div class="px-4 py-3" style="border-bottom:1px solid var(--line)">
+            <span class="label">Purchase Orders</span>
+            <p class="dim text-[11px] mt-1">Format <span class="amber">PO-{CUSTOMER}-{SEQ}</span> — the customer segment links to the ERP account.</p>
           </div>
-          <table class="w-full tbl">
+          <table class="tbl">
             <thead><tr><th>PO Number</th><th>Customer</th><th>Linked Loads</th><th>ERP Status</th></tr></thead>
             <tbody id="pos-body"></tbody>
           </table>
@@ -389,184 +428,132 @@
     </main>
   </div>
 
-  <!-- ════════ CREATE LOAD WIZARD ════════ -->
+  <!-- ════════ WIZARD ════════ -->
   <div id="wizard" hidden class="fixed inset-0 z-40 scrim flex items-start justify-center p-4 overflow-y-auto">
-    <div class="bg-white rounded-2xl shadow-pop max-w-xl w-full my-8" role="dialog" aria-labelledby="wiz-title">
-
-      <div class="px-7 pt-6 pb-4 flex items-start justify-between">
+    <div class="panel max-w-xl w-full my-8" role="dialog" aria-labelledby="wiz-title" style="box-shadow:0 0 0 1px var(--linehot),0 30px 80px rgba(0,0,0,.6)">
+      <div class="px-6 pt-5 pb-3 flex items-start justify-between" style="border-bottom:1px solid var(--line)">
         <div>
-          <h2 id="wiz-title" class="text-lg font-bold tracking-tight">Create Load</h2>
-          <p class="text-xs text-inkmut mt-0.5">PO link → carrier &amp; load details → dispatch via EDI 204</p>
+          <h2 id="wiz-title" class="text-[15px] font-bold amber">CREATE LOAD<span class="cursor"></span></h2>
+          <p class="dim text-[11px] mt-1">PO link → carrier &amp; load details → dispatch (EDI 204)</p>
         </div>
-        <button id="wiz-close" class="text-navy-300 hover:text-navy-600 p-1 -mr-1" aria-label="Close">
-          <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.3 4.3a1 1 0 011.4 0L10 8.6l4.3-4.3a1 1 0 111.4 1.4L11.4 10l4.3 4.3a1 1 0 11-1.4 1.4L10 11.4l-4.3 4.3a1 1 0 11-1.4-1.4L8.6 10 4.3 5.7a1 1 0 010-1.4z"/></svg>
-        </button>
+        <button id="wiz-close" class="dim hover:text-white p-1 -mr-1" aria-label="Close">✕</button>
       </div>
 
       <!-- step rail -->
-      <div class="px-7 pb-5">
-        <div class="flex items-center gap-2">
-          <span id="wi-1" class="wstep wstep-active">1</span>
-          <span class="text-xs font-semibold" id="wl-1">PO Details</span>
-          <span class="flex-1 h-px bg-line mx-1"></span>
-          <span id="wi-2" class="wstep wstep-pending">2</span>
-          <span class="text-xs font-medium text-inkmut" id="wl-2">Load Details</span>
-          <span class="flex-1 h-px bg-line mx-1"></span>
-          <span id="wi-3" class="wstep wstep-pending">3</span>
-          <span class="text-xs font-medium text-inkmut" id="wl-3">Dispatch</span>
-        </div>
+      <div class="px-6 py-4 flex items-center gap-2" style="border-bottom:1px solid var(--line)">
+        <span id="wi-1" class="wstep wstep-active">1</span>
+        <span class="text-[11px]" id="wl-1" style="color:var(--amber)">PO Details</span>
+        <span class="flex-1 h-px mx-1" style="background:var(--line)"></span>
+        <span id="wi-2" class="wstep wstep-pending">2</span>
+        <span class="text-[11px] dim" id="wl-2">Load Details</span>
+        <span class="flex-1 h-px mx-1" style="background:var(--line)"></span>
+        <span id="wi-3" class="wstep wstep-pending">3</span>
+        <span class="text-[11px] dim" id="wl-3">Dispatch</span>
       </div>
 
       <!-- STEP 1 -->
-      <div id="wstep-1" class="px-7 pb-7">
-        <div id="banner-1" hidden class="mb-4 px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[13px] font-medium" role="alert"></div>
+      <div id="wstep-1" class="px-6 py-5">
+        <div id="banner-1" hidden class="term-alert mb-4" role="alert"></div>
         <div class="space-y-4">
           <div>
-            <label class="text-[13px] font-semibold block mb-1.5">PO Number <span class="text-rose-500">*</span></label>
-            <input id="f-po" class="fld font-mono" placeholder="PO-ACME-00012345" autocomplete="off" />
+            <label class="flbl">PO Number *</label>
+            <input id="f-po" class="fld" placeholder="PO-ACME-00012345" autocomplete="off" />
             <div class="fld-msg" id="m-po"></div>
-            <div class="text-[11px] text-inkmut mt-1">Format <span class="font-mono">PO-{CUSTOMER}-{SEQ}</span> · links this load to your ERP</div>
+            <div class="dim text-[10px] mt-1">Format PO-{CUSTOMER}-{SEQ} · links to ERP</div>
           </div>
           <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-[13px] font-semibold block mb-1.5">Shipper <span class="text-rose-500">*</span></label>
-              <input id="f-shipper" class="fld" placeholder="ACME Corp" />
-              <div class="fld-msg" id="m-shipper"></div>
-            </div>
-            <div>
-              <label class="text-[13px] font-semibold block mb-1.5">Consignee <span class="text-rose-500">*</span></label>
-              <input id="f-consignee" class="fld" placeholder="BigMart DC #14" />
-              <div class="fld-msg" id="m-consignee"></div>
-            </div>
+            <div><label class="flbl">Shipper *</label><input id="f-shipper" class="fld" placeholder="ACME Corp" /><div class="fld-msg" id="m-shipper"></div></div>
+            <div><label class="flbl">Consignee *</label><input id="f-consignee" class="fld" placeholder="BigMart DC #14" /><div class="fld-msg" id="m-consignee"></div></div>
           </div>
           <div>
-            <label class="text-[13px] font-semibold block mb-1.5">Commodity</label>
+            <label class="flbl">Commodity</label>
             <select id="f-commodity" class="fld">
               <option>General Freight</option><option>Electronics</option><option>Automotive Parts</option>
               <option>Food &amp; Beverage</option><option>Refrigerated</option><option>Hazmat Class 3</option>
             </select>
           </div>
-          <label class="flex items-start gap-2.5 text-[13px] text-navy-700 pt-1 cursor-pointer">
-            <input id="f-terms" type="checkbox" class="mt-0.5 accent-navy-700 w-4 h-4" />
+          <label class="flex items-start gap-2.5 text-[12px] cursor-pointer dim">
+            <input id="f-terms" type="checkbox" class="mt-0.5" style="accent-color:var(--amber)" />
             <span>Shipment complies with DOT/FMCSA regulations and the shipper authorized dispatch.</span>
           </label>
         </div>
         <div class="mt-6 flex justify-between items-center">
-          <button class="text-sm text-inkmut hover:text-navy-700 font-medium" id="wiz-cancel">Cancel</button>
-          <button id="next-1" class="bg-navy-700 hover:bg-navy-800 text-white text-sm font-semibold px-6 py-2.5 rounded-lg">Continue →</button>
+          <button class="dim hover:text-white text-[12px]" id="wiz-cancel">cancel</button>
+          <button id="next-1" class="btn-amber px-6 py-2 text-[12px]">Continue →</button>
         </div>
       </div>
 
       <!-- STEP 2 -->
-      <div id="wstep-2" hidden class="px-7 pb-7">
-        <div id="banner-2" hidden class="mb-4 px-4 py-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[13px] font-medium" role="alert"></div>
+      <div id="wstep-2" hidden class="px-6 py-5">
+        <div id="banner-2" hidden class="term-alert mb-4" role="alert"></div>
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="text-[13px] font-semibold block mb-1.5">Carrier SCAC <span class="text-rose-500">*</span></label>
-            <input id="f-scac" class="fld font-mono uppercase" maxlength="4" placeholder="UPSF" autocomplete="off" />
-            <div class="fld-msg" id="m-scac"></div>
-            <div class="text-[11px] text-inkmut mt-1">2–4 letters · UPSF, RDWY, FXFE…</div>
-          </div>
-          <div>
-            <label class="text-[13px] font-semibold block mb-1.5">Weight (lbs) <span class="text-rose-500">*</span></label>
-            <input id="f-weight" class="fld font-mono" type="number" placeholder="24500" />
-            <div class="fld-msg" id="m-weight"></div>
-            <div class="text-[11px] text-inkmut mt-1">Max 80,000 lbs GVW</div>
-          </div>
-          <div>
-            <label class="text-[13px] font-semibold block mb-1.5">Origin ZIP <span class="text-rose-500">*</span></label>
-            <input id="f-ozip" class="fld font-mono" maxlength="10" placeholder="60601" />
-            <div class="fld-msg" id="m-ozip"></div>
-          </div>
-          <div>
-            <label class="text-[13px] font-semibold block mb-1.5">Destination ZIP <span class="text-rose-500">*</span></label>
-            <input id="f-dzip" class="fld font-mono" maxlength="10" placeholder="10001" />
-            <div class="fld-msg" id="m-dzip"></div>
-          </div>
-          <div class="col-span-2">
-            <label class="text-[13px] font-semibold block mb-1.5">Pickup date <span class="text-rose-500">*</span></label>
-            <input id="f-pickup" class="fld" type="date" />
-            <div class="fld-msg" id="m-pickup"></div>
-          </div>
+          <div><label class="flbl">Carrier SCAC *</label><input id="f-scac" class="fld uppercase" maxlength="4" placeholder="UPSF" autocomplete="off" /><div class="fld-msg" id="m-scac"></div><div class="dim text-[10px] mt-1">2–4 letters · UPSF, RDWY…</div></div>
+          <div><label class="flbl">Weight (lbs) *</label><input id="f-weight" class="fld" type="number" placeholder="24500" /><div class="fld-msg" id="m-weight"></div><div class="dim text-[10px] mt-1">Max 80,000 GVW</div></div>
+          <div><label class="flbl">Origin ZIP *</label><input id="f-ozip" class="fld" maxlength="10" placeholder="60601" /><div class="fld-msg" id="m-ozip"></div></div>
+          <div><label class="flbl">Destination ZIP *</label><input id="f-dzip" class="fld" maxlength="10" placeholder="10001" /><div class="fld-msg" id="m-dzip"></div></div>
+          <div class="col-span-2"><label class="flbl">Pickup date *</label><input id="f-pickup" class="fld" type="date" /><div class="fld-msg" id="m-pickup"></div></div>
         </div>
         <div class="mt-6 flex justify-between items-center">
-          <button class="text-sm text-inkmut hover:text-navy-700 font-medium" id="back-2">← Back</button>
-          <button id="next-2" class="bg-navy-700 hover:bg-navy-800 text-white text-sm font-semibold px-6 py-2.5 rounded-lg">Review →</button>
+          <button class="dim hover:text-white text-[12px]" id="back-2">← back</button>
+          <button id="next-2" class="btn-amber px-6 py-2 text-[12px]">Review →</button>
         </div>
       </div>
 
       <!-- STEP 3 -->
-      <div id="wstep-3" hidden class="px-7 pb-7">
-        <div id="anomaly-3" hidden class="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-[13px]" role="alert"></div>
-        <div class="bg-navy-50 rounded-xl border border-line divide-y divide-line text-sm" id="review"></div>
+      <div id="wstep-3" hidden class="px-6 py-5">
+        <div id="anomaly-3" hidden class="term-note mb-4" role="alert"></div>
+        <div class="review" id="review"></div>
         <div class="mt-6 flex justify-between items-center">
-          <button class="text-sm text-inkmut hover:text-navy-700 font-medium" id="back-3">← Back</button>
-          <button id="dispatch" class="bg-accent-500 hover:bg-accent-600 text-white text-sm font-bold px-7 py-2.5 rounded-lg flex items-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l8 8-8 8-1.4-1.4L14.2 11H2V9h12.2L8.6 3.4 10 2z"/></svg>
-            Dispatch Load
-          </button>
+          <button class="dim hover:text-white text-[12px]" id="back-3">← back</button>
+          <button id="dispatch" class="btn-amber px-7 py-2 text-[12px] flex items-center gap-2">▸ Dispatch Load</button>
         </div>
       </div>
 
       <!-- SUCCESS -->
-      <div id="wstep-done" hidden class="px-7 pb-9 pt-2 text-center">
-        <div class="w-14 h-14 mx-auto bg-emerald-100 rounded-full flex items-center justify-center">
-          <svg class="w-7 h-7 text-emerald-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z"/></svg>
+      <div id="wstep-done" hidden class="px-6 py-9 text-center">
+        <div class="mx-auto flex items-center justify-center" style="width:52px;height:52px;border:1px solid var(--green);box-shadow:0 0 20px rgba(39,224,161,.3)">
+          <span class="green" style="font-size:26px">✓</span>
         </div>
-        <h3 class="font-bold text-lg mt-4">Load dispatched</h3>
-        <p class="text-sm text-inkmut mt-1">Load <span class="font-mono font-semibold text-navy-800" id="done-id">—</span> created · carrier notified via EDI 204</p>
-        <button id="done-btn" class="mt-5 bg-navy-700 hover:bg-navy-800 text-white text-sm font-semibold px-6 py-2.5 rounded-lg">View on load board</button>
+        <h3 class="font-bold text-[15px] mt-4">LOAD DISPATCHED</h3>
+        <p class="dim text-[12px] mt-1.5">Load <span class="id" id="done-id">—</span> created · carrier notified (EDI 204)</p>
+        <button id="done-btn" class="btn-ghost mt-5 px-6 py-2 text-[11px]">view on load board</button>
       </div>
 
-      <div class="px-7 py-2.5 border-t border-line flex justify-between text-[10px] text-inkmut">
-        <span>TLS 1.3 · synthetic data only</span>
-        <span class="font-mono" id="validator-tag">validator v1.0.0</span>
+      <div class="px-6 py-2.5 flex justify-between text-[10px] dim" style="border-top:1px solid var(--line)">
+        <span>TLS 1.3 · synthetic data</span>
+        <span id="validator-tag">validator v1.0.0</span>
       </div>
     </div>
   </div>
 
-  <!-- Toasts -->
-  <div id="toasts" class="fixed bottom-5 left-5 z-50 space-y-2 max-w-sm"></div>
+  <!-- toasts -->
+  <div id="toasts" class="fixed bottom-5 left-5 z-50 space-y-2"></div>
 
-  <!-- ════════ DEMO / CHAOS PANEL ════════ -->
-  <div id="chaos" class="fixed bottom-5 right-5 z-30 w-[270px] bg-navy-950 text-white rounded-xl shadow-pop border border-navy-800 overflow-hidden">
+  <!-- ════════ FAULT INJECTION ════════ -->
+  <div id="chaos" class="fixed bottom-5 right-5 z-30" style="width:266px;background:var(--panel);border:1px solid var(--line2);box-shadow:0 20px 50px rgba(0,0,0,.5)">
     <button id="chaos-head" class="w-full px-4 py-3 flex items-center justify-between">
-      <span class="flex items-center gap-2 text-[11px] uppercase tracking-[.12em] font-bold">
-        <span id="chaos-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        Bug Injection
+      <span class="flex items-center gap-2 label" style="color:var(--txt)">
+        <span id="chaos-dot" class="cdot is-off"></span> Fault Injection
       </span>
-      <svg id="chaos-chev" class="w-4 h-4 text-navy-400 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
+      <svg id="chaos-chev" class="w-4 h-4 dim transition-transform" viewBox="0 0 20 20" fill="currentColor"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
     </button>
     <div id="chaos-body" class="px-4 pb-4 space-y-3.5">
-      <p class="text-[10px] text-navy-400 leading-relaxed -mt-1">Re-introduce known validator regressions to exercise the NexAI detect→fix pipeline.</p>
-
+      <p class="dim text-[10px] leading-relaxed -mt-1">Re-introduce known validator regressions to exercise the NexAI detect→fix pipeline.</p>
       <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <div class="text-xs font-bold">B1 · PO format</div>
-          <div class="text-[10px] text-navy-400 truncate" id="lbl-b1">regex + · strict</div>
-        </div>
+        <div class="min-w-0"><div class="text-[11px] font-bold">B1 · PO format</div><div class="bug-lbl is-off truncate" id="lbl-b1">regex + · strict</div></div>
         <label class="switch"><input type="checkbox" id="sw-b1"><span class="track"></span></label>
       </div>
-
       <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <div class="text-xs font-bold">B2 · Load weight</div>
-          <div class="text-[10px] text-navy-400 truncate" id="lbl-b2">zero-weight guard on</div>
-        </div>
+        <div class="min-w-0"><div class="text-[11px] font-bold">B2 · Load weight</div><div class="bug-lbl is-off truncate" id="lbl-b2">zero-weight guard on</div></div>
         <label class="switch"><input type="checkbox" id="sw-b2"><span class="track"></span></label>
       </div>
-
       <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <div class="text-xs font-bold">B3 · Carrier SCAC</div>
-          <div class="text-[10px] text-navy-400 truncate" id="lbl-b3">regex {2,4} · strict</div>
-        </div>
+        <div class="min-w-0"><div class="text-[11px] font-bold">B3 · Carrier SCAC</div><div class="bug-lbl is-off truncate" id="lbl-b3">regex {2,4} · strict</div></div>
         <label class="switch"><input type="checkbox" id="sw-b3"><span class="track"></span></label>
       </div>
-
-      <div class="pt-2 border-t border-navy-800 space-y-1.5 text-[11px]">
-        <a href="http://localhost:9094/graph" target="_blank" rel="noopener" class="block text-navy-300 hover:text-white">↗ Prometheus <span class="font-mono text-navy-500">:9094</span></a>
-        <a href="http://localhost:3001" target="_blank" rel="noopener" class="block text-navy-300 hover:text-white">↗ Grafana <span class="font-mono text-navy-500">:3001</span></a>
+      <div class="pt-2.5 space-y-1.5 text-[11px]" style="border-top:1px solid var(--line)">
+        <a href="http://localhost:9094/graph" target="_blank" rel="noopener" class="block dim hover:text-white">↗ Prometheus <span style="color:var(--dim)">:9094</span></a>
+        <a href="http://localhost:3001" target="_blank" rel="noopener" class="block dim hover:text-white">↗ Grafana <span style="color:var(--dim)">:3001</span></a>
       </div>
     </div>
   </div>
@@ -586,14 +573,8 @@ function emitMetric(event, payload) {
 
 /* ═══════════════ toasts ═══════════════ */
 function toast(msg, kind) {
-  const tones = {
-    info:    'bg-navy-900 border-navy-700',
-    success: 'bg-emerald-600 border-emerald-700',
-    warn:    'bg-amber-500 border-amber-600',
-    error:   'bg-rose-600 border-rose-700',
-  };
   const el = document.createElement('div');
-  el.className = `toast text-white text-[13px] font-medium border rounded-lg shadow-pop px-4 py-3 ${tones[kind] || tones.info}`;
+  el.className = `toast toast--${kind || 'info'}`;
   el.textContent = msg;
   document.getElementById('toasts').appendChild(el);
   setTimeout(() => el.remove(), 5200);
@@ -686,7 +667,7 @@ const CARRIERS = [
 
 /* ═══════════════ view router ═══════════════ */
 const VIEWS = ['dashboard','loads','carriers','pos'];
-const TITLES = { dashboard:'Dashboard', loads:'Loads', carriers:'Carrier Network', pos:'PO Tracking' };
+const TITLES = { dashboard:'dashboard', loads:'loads', carriers:'carriers', pos:'pos' };
 function show(view) {
   VIEWS.forEach(v => document.getElementById('view-'+v).hidden = v !== view);
   document.querySelectorAll('.nav-item[data-view]').forEach(el =>
@@ -704,12 +685,12 @@ document.querySelectorAll('[data-view-link]').forEach(el =>
 
 /* ═══════════════ renderers ═══════════════ */
 const STATUS_CHIP = {
-  'Dispatched': 'bg-accent-500/15 text-accent-700',
-  'In Transit': 'bg-navy-100 text-navy-700',
-  'Pending':    'bg-amber-100 text-amber-700',
-  'Delivered':  'bg-emerald-100 text-emerald-700',
+  'Dispatched': 'chip--accent',
+  'In Transit': 'chip--cyan',
+  'Pending':    'chip--amber',
+  'Delivered':  'chip--green',
 };
-function chip(status) { return `<span class="chip ${STATUS_CHIP[status] || 'bg-navy-100 text-navy-700'}">${status}</span>`; }
+function chip(status) { return `<span class="chip ${STATUS_CHIP[status] || 'chip--mut'}">${status}</span>`; }
 function fmtW(w) { return Number(w).toLocaleString() + ' lbs'; }
 
 function renderDashboard() {
@@ -719,10 +700,10 @@ function renderDashboard() {
   document.getElementById('kpi-delivered').textContent = loads.filter(l => l.status === 'Delivered').length;
   document.getElementById('dash-loads-body').innerHTML = loads.slice().reverse().slice(0, 5).map(l => `
     <tr>
-      <td class="font-mono font-semibold text-navy-800">${l.id}</td>
+      <td class="id">${l.id}</td>
       <td>${l.route}</td>
-      <td class="font-mono">${l.scac || '—'}</td>
-      <td class="font-mono">${fmtW(l.weight)}</td>
+      <td class="dim">${l.scac || '—'}</td>
+      <td>${fmtW(l.weight)}</td>
       <td>${chip(l.status)}</td>
     </tr>`).join('');
 }
@@ -736,12 +717,12 @@ function renderLoads() {
   document.getElementById('loads-empty').hidden = loads.length > 0;
   document.getElementById('loads-body').innerHTML = loads.map(l => `
     <tr>
-      <td class="font-mono font-semibold text-navy-800">${l.id}</td>
-      <td class="font-mono text-inkmut">${l.po}</td>
+      <td class="id">${l.id}</td>
+      <td class="dim">${l.po}</td>
       <td>${l.route}</td>
-      <td class="font-mono">${l.scac || '—'}</td>
-      <td class="font-mono">${fmtW(l.weight)}</td>
-      <td class="font-mono text-inkmut">${l.pickup}</td>
+      <td>${l.scac || '—'}</td>
+      <td>${fmtW(l.weight)}</td>
+      <td class="dim">${l.pickup}</td>
       <td>${chip(l.status)}</td>
     </tr>`).join('');
 }
@@ -749,8 +730,7 @@ document.getElementById('load-filters').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-filter]'); if (!btn) return;
   loadFilter = btn.dataset.filter;
   document.querySelectorAll('#load-filters [data-filter]').forEach(b => {
-    const on = b === btn;
-    b.className = `chip ${on ? 'bg-navy-700 text-white' : 'bg-navy-100 text-navy-700 hover:bg-navy-200'}`;
+    b.className = `fbtn ${b === btn ? 'active' : ''}`;
   });
   renderLoads();
 });
@@ -761,16 +741,16 @@ document.getElementById('global-search').addEventListener('input', () => {
 
 function renderCarriers() {
   document.getElementById('carriers-grid').innerHTML = CARRIERS.map(c => `
-    <div class="bg-white rounded-xl border border-line shadow-card p-5">
-      <div class="flex items-center justify-between">
-        <span class="font-mono font-bold text-navy-800 text-lg">${c.scac}</span>
-        <span class="chip bg-emerald-100 text-emerald-700">ACTIVE</span>
+    <div class="tcard">
+      <div class="tcard-top">
+        <span class="id big">${c.scac}</span>
+        <span class="chip chip--green">ACTIVE</span>
       </div>
-      <div class="font-semibold text-sm mt-1">${c.name}</div>
-      <div class="grid grid-cols-3 gap-2 mt-4 text-center">
-        <div class="bg-navy-50 rounded-lg py-2"><div class="text-[9px] uppercase tracking-wide text-inkmut font-bold">Mode</div><div class="text-xs font-semibold mt-0.5">${c.mode}</div></div>
-        <div class="bg-navy-50 rounded-lg py-2"><div class="text-[9px] uppercase tracking-wide text-inkmut font-bold">On-time</div><div class="text-xs font-semibold mt-0.5">${c.otp}</div></div>
-        <div class="bg-navy-50 rounded-lg py-2"><div class="text-[9px] uppercase tracking-wide text-inkmut font-bold">Lanes</div><div class="text-xs font-semibold mt-0.5">${c.lanes}</div></div>
+      <div class="tcard-name">${c.name}</div>
+      <div class="tcard-stats">
+        <div><span class="k">Mode</span><span class="v">${c.mode}</span></div>
+        <div><span class="k">On-time</span><span class="v green">${c.otp}</span></div>
+        <div><span class="k">Lanes</span><span class="v">${c.lanes}</span></div>
       </div>
     </div>`).join('');
 }
@@ -785,12 +765,12 @@ function renderPOs() {
   });
   document.getElementById('pos-body').innerHTML = Object.entries(byPO).map(([po, d]) => `
     <tr>
-      <td class="font-mono font-semibold text-navy-800">${po}</td>
-      <td class="font-mono ${d.broken ? 'text-rose-600 font-bold' : ''}">${d.customer}</td>
+      <td class="id">${po}</td>
+      <td class="${d.broken ? 'rose' : ''}">${d.customer}</td>
       <td>${d.count} load${d.count > 1 ? 's' : ''}</td>
       <td>${d.broken
-        ? '<span class="chip bg-rose-100 text-rose-700">LINKAGE FAILED</span>'
-        : '<span class="chip bg-emerald-100 text-emerald-700">LINKED</span>'}</td>
+        ? '<span class="chip chip--rose">LINKAGE FAILED</span>'
+        : '<span class="chip chip--green">LINKED</span>'}</td>
     </tr>`).join('');
 }
 
@@ -798,7 +778,6 @@ function renderPOs() {
 const wizard = document.getElementById('wizard');
 function openWizard() {
   wizard.hidden = false;
-  // default pickup: tomorrow
   const d = new Date(Date.now() + 86400000);
   document.getElementById('f-pickup').value = d.toISOString().slice(0, 10);
   setStep(1);
@@ -825,9 +804,9 @@ function setStep(n) {
     const ind = document.getElementById('wi-'+i), lbl = document.getElementById('wl-'+i);
     const state = (n === 'done' || i < n) ? 'done' : (i === n ? 'active' : 'pending');
     ind.className = 'wstep wstep-' + state;
-    if (state === 'done') ind.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z"/></svg>';
+    if (state === 'done') ind.innerHTML = '✓';
     else ind.textContent = i;
-    lbl.className = 'text-xs ' + (state === 'pending' ? 'font-medium text-inkmut' : 'font-semibold');
+    lbl.className = 'text-[11px]' + (state === 'pending' ? ' dim' : (state === 'active' ? ' amber' : ''));
   });
 }
 
@@ -952,9 +931,9 @@ function fillReview() {
     ['Pickup',     g('f-pickup'), true],
   ];
   document.getElementById('review').innerHTML = rows.map(([k, v, mono]) => `
-    <div class="flex justify-between px-4 py-2.5">
-      <span class="text-inkmut">${k}</span>
-      <span class="font-semibold ${mono ? 'font-mono' : ''}">${v}</span>
+    <div class="rev-row">
+      <span class="k">${k}</span>
+      <span class="${mono ? 'id' : ''}">${v}</span>
     </div>`).join('');
 }
 
@@ -981,14 +960,14 @@ document.getElementById('dispatch').onclick = () => {
 };
 document.getElementById('done-btn').onclick = () => { closeWizard(); show('loads'); };
 
-/* ═══════════════ chaos panel ═══════════════ */
+/* ═══════════════ fault injection ═══════════════ */
 function bindBug(sw, lbl, set, bugKey, onTxt, offTxt, toastOn) {
   document.getElementById(sw).addEventListener('change', (e) => {
     const on = e.target.checked;
     set(on);
     const label = document.getElementById(lbl);
     label.textContent = on ? onTxt : offTxt;
-    label.className = `text-[10px] truncate ${on ? 'text-rose-400 font-semibold' : 'text-navy-400'}`;
+    label.className = `bug-lbl truncate ${on ? 'is-on' : 'is-off'}`;
     emitMetric('bug_toggle', { bug: bugKey, state: on });
     updateChaosState();
     toast(on ? toastOn : `Bug ${bugKey.split('_')[0].toUpperCase()} off — validator restored.`, on ? 'warn' : 'success');
@@ -1006,8 +985,7 @@ bindBug('sw-b3','lbl-b3', v => useB3 = v, 'b3_register_load_carrier',
 
 function updateChaosState() {
   const n = [useB1, useB2, useB3].filter(Boolean).length;
-  const dot = document.getElementById('chaos-dot');
-  dot.className = `w-2 h-2 rounded-full ${n ? 'bg-rose-400 pulse' : 'bg-emerald-400'}`;
+  document.getElementById('chaos-dot').className = `cdot ${n ? 'is-on' : 'is-off'}`;
   document.getElementById('validator-tag').textContent =
     n ? `validator v1.0.0 · ${n} bug${n > 1 ? 's' : ''} injected` : 'validator v1.0.0';
 }
@@ -1017,7 +995,7 @@ document.getElementById('chaos-head').onclick = () => {
   document.getElementById('chaos-chev').style.transform = body.hidden ? 'rotate(180deg)' : '';
 };
 
-/* ═══════════════ metrics polling → sidebar + ops health ═══════════════ */
+/* ═══════════════ metrics polling → sidebar + ops signal ═══════════════ */
 async function refreshStatus() {
   try {
     if (location.protocol === 'file:' || !location.hostname) return;
@@ -1040,23 +1018,21 @@ async function refreshStatus() {
     const rate = attempts > 0 ? failures / attempts : 0;
     const pct  = (rate * 100).toFixed(1);
 
-    // sidebar status
     const dot = document.getElementById('sb-dot'), txt = document.getElementById('sb-text'), sub = document.getElementById('sb-sub');
     if (rate >= 0.10) {
-      dot.className = 'w-2 h-2 rounded-full bg-rose-400 pulse flex-shrink-0';
-      txt.textContent = 'Sev2 — failure rate over threshold';
-      sub.textContent = `failure rate ${pct}% > 10% · alert → NexAI`;
+      dot.className = 'sdot is-rose'; txt.style.color = 'var(--rose)';
+      txt.textContent = 'SEV2 — FAILRATE OVER THRESHOLD';
+      sub.textContent = `failrate ${pct}% > 10% · alert → NexAI`;
     } else if (rate >= 0.03) {
-      dot.className = 'w-2 h-2 rounded-full bg-amber-400 flex-shrink-0';
-      txt.textContent = 'Elevated failure rate';
-      sub.textContent = `failure rate ${pct}% · under alert threshold`;
+      dot.className = 'sdot is-amber'; txt.style.color = 'var(--yellow)';
+      txt.textContent = 'ELEVATED FAILURE RATE';
+      sub.textContent = `failrate ${pct}% · under threshold`;
     } else {
-      dot.className = 'w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0';
-      txt.textContent = 'All systems operational';
-      sub.textContent = `failure rate ${pct}% · auto-refresh 10s`;
+      dot.className = 'sdot is-green'; txt.style.color = 'var(--green)';
+      txt.textContent = 'ALL SYSTEMS NOMINAL';
+      sub.textContent = `failrate ${pct}% · refresh 10s`;
     }
 
-    // ops health card
     document.getElementById('health-rate').textContent = pct + '%';
     document.getElementById('health-attempts').textContent = Math.round(attempts);
     document.getElementById('health-failures').textContent = Math.round(failures);
@@ -1064,21 +1040,24 @@ async function refreshStatus() {
     const barPct = Math.min(rate / 0.25, 1) * 100;
     const bar = document.getElementById('health-bar');
     bar.style.width = Math.max(barPct, rate > 0 ? 3 : 0) + '%';
-    bar.className = `h-full rounded-full transition-all duration-700 ${rate >= 0.10 ? 'bg-rose-500' : rate >= 0.03 ? 'bg-amber-400' : 'bg-emerald-500'}`;
+    const sig = rate >= 0.10 ? 'var(--rose)' : rate >= 0.03 ? 'var(--yellow)' : 'var(--green)';
+    bar.style.background = sig; bar.style.color = sig;
+    const hRate = document.getElementById('health-rate');
+    hRate.className = 'text-[22px] font-bold ' + (rate >= 0.10 ? 'rose' : rate >= 0.03 ? 'yellow' : 'green');
     const hChip = document.getElementById('health-chip');
-    if (rate >= 0.10) { hChip.textContent = 'SEV2 FIRING'; hChip.className = 'chip bg-rose-100 text-rose-700'; }
-    else if (rate >= 0.03) { hChip.textContent = 'DEGRADED'; hChip.className = 'chip bg-amber-100 text-amber-700'; }
-    else { hChip.textContent = 'HEALTHY'; hChip.className = 'chip bg-emerald-100 text-emerald-700'; }
+    if (rate >= 0.10) { hChip.textContent = 'SEV2 FIRING'; hChip.className = 'chip chip--rose'; }
+    else if (rate >= 0.03) { hChip.textContent = 'DEGRADED'; hChip.className = 'chip chip--amber'; }
+    else { hChip.textContent = 'HEALTHY'; hChip.className = 'chip chip--green'; }
 
     const CODE_BUG = { ERP_PO_LINKAGE_FAILED:'B1', CARRIER_RATE_FAILED:'B2', CARRIER_LOOKUP_FAILED:'B3' };
     document.getElementById('health-codes').innerHTML = Object.entries(codes)
       .filter(([, v]) => v > 0)
       .map(([c, v]) => `
-        <div class="flex items-center justify-between text-[11px]">
-          <span class="font-mono text-inkmut">${CODE_BUG[c] || '·'} ${c}</span>
-          <span class="font-mono font-bold text-rose-600">${Math.round(v)}</span>
+        <div class="logline">
+          <span class="dim">${CODE_BUG[c] || '·'} ${c}</span>
+          <span class="rose">${Math.round(v)}</span>
         </div>`).join('')
-      || '<div class="text-[11px] text-inkmut">No downstream failures recorded.</div>';
+      || '<div class="dim text-[11px]">no downstream failures recorded.</div>';
   } catch (_) {}
 }
 
