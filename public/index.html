@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FreightOps · Dispatch Terminal</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='9' fill='%23070a10'/%3E%3Cpath d='M9 14l6 5-6 5' fill='none' stroke='%23ffb02e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='20' y='27' width='16' height='3.4' rx='1.7' fill='%2327e0a1'/%3E%3C/svg%3E" />
+  <!-- Datadog RUM + Session Replay (Real User Monitoring) -->
+  <script>
+    (function(h,o,u,n,d){h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}};d=o.createElement(u);d.async=1;d.src=n;n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)})(window,document,'script','https://www.datadoghq-browser-agent.com/datadog-rum-v5.js','DD_RUM');
+    window.DD_RUM.onReady(function(){
+      window.DD_RUM.init({
+        clientToken: 'pubc813c07a7e888be020d165de4ae58214',
+        applicationId: '775b1df8-f450-4fed-8f3b-3bf354c8b10b',
+        site: 'us5.datadoghq.com',
+        service: 'freightops-portal',
+        env: 'prod',
+        version: '1.0.0',
+        sessionSampleRate: 100,
+        sessionReplaySampleRate: 100,
+        trackUserInteractions: true,
+        trackResources: true,
+        trackLongTasks: true,
+        defaultPrivacyLevel: 'allow'
+      });
+    });
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -830,7 +850,7 @@ document.getElementById('next-1').onclick = () => {
 
   const emptyCustomer = /^PO--/.test(po.trim().toUpperCase());
   if (ok && emptyCustomer) {
-    emitMetric('load_create_validation_failure', { error_code: 'ERP_PO_LINKAGE_FAILED' });
+    emitMetric('load_create_validation_failure', { error_code: 'ERP_PO_LINKAGE_FAILED', po: po.trim().toUpperCase() });
     toast('ERP sync failed — this purchase order could not be linked to an account.', 'warn');
     setStep(2); return;
   }
@@ -870,21 +890,21 @@ document.getElementById('next-2').onclick = () => {
   const anomaly = document.getElementById('anomaly-3'); anomaly.hidden = true;
 
   if (ok && zeroWeight) {
-    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_RATE_FAILED' });
+    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_RATE_FAILED', weight_lbs: Number(weight), scac: scac.trim().toUpperCase() });
     toast('Rating engine error — a zero-weight load could not be priced. Dispatch has been notified.', 'warn');
     anomaly.innerHTML = '<strong>⚠ System error:</strong> the rating engine could not price this load (zero weight). The operations team has been alerted.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }
   if (ok && emptyCarrier) {
-    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_LOOKUP_FAILED' });
+    emitMetric('load_create_validation_failure', { error_code: 'CARRIER_LOOKUP_FAILED', scac: scac.trim().toUpperCase() });
     toast('Carrier lookup failed — SCAC could not be resolved in the network.', 'warn');
     anomaly.innerHTML = '<strong>⚠ System error:</strong> the carrier network lookup failed for this SCAC. The operations team has been alerted.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }
   if (ok && pastPickup) {
-    emitMetric('load_create_validation_failure', { error_code: 'DISPATCH_TENDER_REJECTED' });
+    emitMetric('load_create_validation_failure', { error_code: 'DISPATCH_TENDER_REJECTED', pickup_date: pickup, scac: scac.trim().toUpperCase(), weight_lbs: Number(weight) });
     toast('Carrier tender rejected — the pickup date has already passed.', 'warn');
     anomaly.innerHTML = '<strong>⚠ System error:</strong> carrier dispatch rejected this load because the pickup date has passed. The operations team has been alerted.';
     anomaly.hidden = false;

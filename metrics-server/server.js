@@ -4,6 +4,22 @@
 // Run:  node server.js  (defaults: PORT=8080, STATIC_DIR=..)
 // or:   docker compose up portal-app
 
+// ── Datadog APM tracing (MUST initialize before express is required) ──────────
+let tracer = null;
+try {
+  tracer = require('dd-trace').init({
+    service: process.env.DD_SERVICE || 'freightops-portal',
+    env: process.env.DD_ENV || 'prod',
+    version: process.env.DD_VERSION || '1.0.0',
+    logInjection: true,
+    runtimeMetrics: true,
+    profiling: process.env.DD_PROFILING_ENABLED === 'true',
+  });
+} catch (e) {
+  console.warn(JSON.stringify({ level: 'warn', service: 'freightops-portal',
+    msg: 'dd-trace unavailable — continuing without APM', err: String(e && e.message) }));
+}
+
 const express = require('express');
 const path = require('path');
 const client = require('prom-client');
@@ -16,6 +32,25 @@ const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || '';
 const SLACK_CHANNEL   = process.env.SLACK_CHANNEL   || '';
 const PLAYBOOK_PATH   = process.env.PLAYBOOK_PATH   ||
   'demo/logistics/playbooks/incident-response-v1.md';
+
+// ── structured logger (JSON → stdout → Datadog Logs, trace-correlated) ────────
+function logJSON(level, fields) {
+  const rec = { level, ts: new Date().toISOString(), service: process.env.DD_SERVICE || APP_NAME, env: APP_ENV, ...fields };
+  try {
+    const span = tracer && tracer.scope && tracer.scope().active();
+    const ctx = span && span.context && span.context();
+    if (ctx) rec.dd = { trace_id: ctx.toTraceId && ctx.toTraceId(), span_id: ctx.toSpanId && ctx.toSpanId() };
+  } catch (_) {}
+  (level === 'error' ? console.error : console.log)(JSON.stringify(rec));
+}
+const s = (v) => (typeof v === 'string' ? v.slice(0, 60) : v);
+// Realistic downstream error message per code (for logs + APM error spans).
+const FAILURE_MSG = {
+  ERP_PO_LINKAGE_FAILED:    'erp sync: purchase order has no customer segment — cannot link to an ERP account',
+  CARRIER_RATE_FAILED:      'rating engine: rate calculation failed — load weight must be greater than zero',
+  CARRIER_LOOKUP_FAILED:    'carrier network: SCAC lookup returned no match in the carrier network',
+  DISPATCH_TENDER_REJECTED: 'dispatch: carrier tender rejected — pickup date is in the past',
+};
 
 // ── Prometheus registry ──────────────────────────────────────────────────────
 const register = new client.Registry();
@@ -109,6 +144,26 @@ app.post('/events', (req, res) => {
         ? payload.error_code
         : 'UNKNOWN';
       loadCreateFailuresTotal.inc({ ...baseLabels, error_code: code });
+      const msg = FAILURE_MSG[code] || 'downstream validation failure';
+      // Flag the active APM request span as an error so Datadog Error Tracking groups it.
+      try {
+        const span = tracer && tracer.scope && tracer.scope().active();
+        if (span) {
+          span.setTag('error', true);
+          span.setTag('error.type', code);
+          span.setTag('error.message', msg);
+          span.setTag('freight.error_code', code);
+        }
+      } catch (_) {}
+      // Structured error log → Datadog Logs (and Error Tracking).
+      logJSON('error', {
+        logger: { name: 'rating-engine' },
+        event: 'load.create.failed',
+        error_code: code,
+        error: { kind: code, message: msg, stack: `${code}: ${msg}` },
+        msg,
+        load: { po: s(payload.po), scac: s(payload.scac), weight_lbs: payload.weight_lbs, pickup_date: s(payload.pickup_date) },
+      });
       break;
     }
     case 'load_create_client_rejection': {
