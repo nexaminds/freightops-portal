@@ -195,17 +195,6 @@
 </head>
 <body>
 
-  <!-- Nexaminds mark sprite -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-    <linearGradient id="nxg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3ad0e6"/><stop offset=".5" stop-color="#27e0a1"/><stop offset="1" stop-color="#27e0a1"/>
-    </linearGradient>
-    <symbol id="nx-mark" viewBox="0 0 183.55 257.06">
-      <path fill="url(#nxg)" d="M59.06,236.06a15.83,15.83,0,0,1-4.4-10.1V198.4a13.33,13.33,0,0,0-4.86-9.54L4.86,156.17A13.3,13.3,0,0,1,0,146.63V68.89a13.88,13.88,0,0,1,4.75-9.68L80,1.09c2.61-2,4.75-1.15,4.75,1.93a53.54,53.54,0,0,1-1.54,11.42,12.16,12.16,0,0,1-1.52,6.26,39.21,39.21,0,0,1-7.9,8.2l-51.57,38a13.42,13.42,0,0,0-4.83,9.57v37.42a14.85,14.85,0,0,0,4.57,9.91l58.22,49.63a14.85,14.85,0,0,1,4.57,9.9v70.52c0,3.31-2,4.17-4.4,1.92Z"/>
-      <path fill="url(#nxg)" d="M98.83,183.37a14.81,14.81,0,0,1,4.57-9.9l58.22-49.63a14.85,14.85,0,0,0,4.57-9.91V76.51a13.43,13.43,0,0,0-4.84-9.57l-51.57-38a39.14,39.14,0,0,1-7.89-8.2C100.2,18.15,98.83,6.11,98.83,3s2.14-4,4.75-1.94l75.21,58.12a13.85,13.85,0,0,1,4.76,9.68v77.74a13.3,13.3,0,0,1-4.86,9.54l-44.95,32.69a13.33,13.33,0,0,0-4.86,9.54V226a15.83,15.83,0,0,1-4.4,10.1l-21.25,19.75c-2.42,2.25-4.4,1.38-4.4-1.92Z"/>
-    </symbol>
-  </defs></svg>
-
   <!-- ════════ SIDEBAR ════════ -->
   <aside>
     <!-- brand -->
@@ -261,11 +250,8 @@
         <span id="sb-text" class="truncate" style="color:var(--green)">ALL SYSTEMS NOMINAL</span>
       </div>
       <div id="sb-sub" class="text-[10px] dim mt-1 pl-4">failrate 0.0% · refresh 10s</div>
-      <div class="mt-3 pt-3 flex items-center gap-2.5" style="border-top:1px solid var(--line)">
-        <svg width="13" height="18" aria-hidden="true"><use href="#nx-mark"/></svg>
-        <div class="text-[10px] dim leading-snug">
-          monitored by <span class="green">NEXAI AGENTS</span><br>by <span style="color:var(--txt)">NEXAMINDS</span>
-        </div>
+      <div class="mt-3 pt-3 text-[10px] dim leading-snug" style="border-top:1px solid var(--line)">
+        observability · <span style="color:var(--txt)">Datadog</span> + Prometheus<br>build v3.2.1 · us-central1
       </div>
     </div>
   </aside>
@@ -362,24 +348,18 @@
           </div>
         </div>
 
-        <!-- incident console -->
-        <div class="mt-3 relative overflow-hidden p-5" style="background:linear-gradient(120deg,#0a1018,#06090f);border:1px solid var(--line)">
-          <div aria-hidden="true" class="absolute inset-0 pointer-events-none" style="background:radial-gradient(360px 160px at 8% -30%,rgba(255,176,46,.12),transparent 60%),radial-gradient(360px 180px at 100% 130%,rgba(39,224,161,.10),transparent 60%)"></div>
-          <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
-            <div class="flex items-center gap-3.5 flex-shrink-0 lg:w-64">
-              <svg width="28" height="40" aria-hidden="true"><use href="#nx-mark"/></svg>
-              <div>
-                <div class="label" style="color:var(--amber)">Autonomous Incident Response</div>
-                <div class="text-[13px] font-bold mt-1">detect → triage → fix → test → PR</div>
-                <div class="text-[10px] dim mt-1">powered by <span class="green">NEXAI AGENTS</span></div>
-              </div>
-            </div>
-            <div class="relative flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div class="cell p-3"><div class="dim text-[10px]">detect</div><div class="text-[17px] font-bold amber mt-1">&lt;90<span class="dim text-[10px] ml-0.5">s</span></div></div>
-              <div class="cell p-3"><div class="dim text-[10px]">fix PR</div><div class="text-[17px] font-bold amber mt-1">&lt;5<span class="dim text-[10px] ml-0.5">min</span></div></div>
-              <div class="cell p-3"><div class="dim text-[10px]">tests</div><div class="text-[12px] font-semibold green mt-1.5">auto-authored</div></div>
-              <div class="cell p-3"><div class="dim text-[10px]">gate</div><div class="text-[12px] font-semibold mt-1.5">review &amp; merge</div></div>
-            </div>
+        <!-- platform services -->
+        <div class="mt-3 panel p-4">
+          <div class="flex items-center justify-between mb-3">
+            <span class="label">Platform Services</span>
+            <span class="dim text-[10px]">region us-central1 · updated just now</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div class="cell p-3"><div class="flex items-center gap-2"><span class="sdot is-green"></span><span class="text-[11px]">API Gateway</span></div><div class="dim text-[10px] mt-1.5">operational</div></div>
+            <div class="cell p-3"><div class="flex items-center gap-2"><span class="sdot is-green"></span><span class="text-[11px]">Rating Engine</span></div><div class="dim text-[10px] mt-1.5">operational</div></div>
+            <div class="cell p-3"><div class="flex items-center gap-2"><span class="sdot is-green"></span><span class="text-[11px]">EDI 204 / 210</span></div><div class="dim text-[10px] mt-1.5">operational</div></div>
+            <div class="cell p-3"><div class="flex items-center gap-2"><span class="sdot is-green"></span><span class="text-[11px]">Carrier Network</span></div><div class="dim text-[10px] mt-1.5">operational</div></div>
+            <div class="cell p-3"><div class="flex items-center gap-2"><span class="sdot is-green"></span><span class="text-[11px]">ERP Sync</span></div><div class="dim text-[10px] mt-1.5">operational</div></div>
           </div>
         </div>
       </section>
@@ -521,7 +501,7 @@
 
       <div class="px-6 py-2.5 flex justify-between text-[10px] dim" style="border-top:1px solid var(--line)">
         <span>TLS 1.3 · synthetic data</span>
-        <span id="validator-tag">validator v1.0.0</span>
+        <span id="validator-tag">build v3.2.1</span>
       </div>
     </div>
   </div>
@@ -529,16 +509,16 @@
   <!-- toasts -->
   <div id="toasts" class="fixed bottom-5 left-5 z-50 space-y-2"></div>
 
-  <!-- ════════ FAULT INJECTION ════════ -->
-  <div id="chaos" class="fixed bottom-5 right-5 z-30" style="width:266px;background:var(--panel);border:1px solid var(--line2);box-shadow:0 20px 50px rgba(0,0,0,.5)">
+  <!-- ════════ SCENARIO CONTROLS ════════ -->
+  <div id="chaos" hidden class="fixed bottom-5 right-5 z-30" style="width:266px;background:var(--panel);border:1px solid var(--line2);box-shadow:0 20px 50px rgba(0,0,0,.5)">
     <button id="chaos-head" class="w-full px-4 py-3 flex items-center justify-between">
       <span class="flex items-center gap-2 label" style="color:var(--txt)">
-        <span id="chaos-dot" class="cdot is-off"></span> Fault Injection
+        <span id="chaos-dot" class="cdot is-off"></span> Scenario Controls
       </span>
       <svg id="chaos-chev" class="w-4 h-4 dim transition-transform" viewBox="0 0 20 20" fill="currentColor"><path d="M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z"/></svg>
     </button>
     <div id="chaos-body" class="px-4 pb-4 space-y-3.5">
-      <p class="dim text-[10px] leading-relaxed -mt-1">Re-introduce known validator regressions to exercise the NexAI detect→fix pipeline.</p>
+      <p class="dim text-[10px] leading-relaxed -mt-1">Arm a latent validation regression to simulate a shipped defect. <span class="dim">(Ctrl+Shift+B to hide)</span></p>
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0"><div class="text-[11px] font-bold">B1 · PO format</div><div class="bug-lbl is-off truncate" id="lbl-b1">regex + · strict</div></div>
         <label class="switch"><input type="checkbox" id="sw-b1"><span class="track"></span></label>
@@ -851,7 +831,7 @@ document.getElementById('next-1').onclick = () => {
   const emptyCustomer = /^PO--/.test(po.trim().toUpperCase());
   if (ok && emptyCustomer) {
     emitMetric('load_create_validation_failure', { error_code: 'ERP_PO_LINKAGE_FAILED' });
-    toast('ERP PO linkage failed — empty customer segment reached the ERP. Incident reported.', 'warn');
+    toast('ERP sync failed — this purchase order could not be linked to an account.', 'warn');
     setStep(2); return;
   }
   if (!ok) {
@@ -891,22 +871,22 @@ document.getElementById('next-2').onclick = () => {
 
   if (ok && zeroWeight) {
     emitMetric('load_create_validation_failure', { error_code: 'CARRIER_RATE_FAILED' });
-    toast('Carrier rate calculation failed — zero-weight load cannot be priced. Incident reported.', 'warn');
-    anomaly.innerHTML = '<strong>⚠ Downstream anomaly:</strong> zero-weight load passed validation and broke carrier rating. This event was reported to NexAI.';
+    toast('Rating engine error — a zero-weight load could not be priced. Dispatch has been notified.', 'warn');
+    anomaly.innerHTML = '<strong>⚠ System error:</strong> the rating engine could not price this load (zero weight). The operations team has been alerted.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }
   if (ok && emptyCarrier) {
     emitMetric('load_create_validation_failure', { error_code: 'CARRIER_LOOKUP_FAILED' });
-    toast('Carrier lookup failed — empty SCAC not found in network. Incident reported.', 'warn');
-    anomaly.innerHTML = '<strong>⚠ Downstream anomaly:</strong> empty SCAC passed validation and failed network lookup. This event was reported to NexAI.';
+    toast('Carrier lookup failed — SCAC could not be resolved in the network.', 'warn');
+    anomaly.innerHTML = '<strong>⚠ System error:</strong> the carrier network lookup failed for this SCAC. The operations team has been alerted.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }
   if (ok && pastPickup) {
     emitMetric('load_create_validation_failure', { error_code: 'DISPATCH_TENDER_REJECTED' });
-    toast('Carrier dispatch rejected the load — pickup date is in the past and cannot be tendered. Incident reported.', 'warn');
-    anomaly.innerHTML = '<strong>⚠ Downstream anomaly:</strong> a load with a past pickup date passed validation and was rejected by carrier dispatch. This event was reported to NexAI.';
+    toast('Carrier tender rejected — the pickup date has already passed.', 'warn');
+    anomaly.innerHTML = '<strong>⚠ System error:</strong> carrier dispatch rejected this load because the pickup date has passed. The operations team has been alerted.';
     anomaly.hidden = false;
     fillReview(); setStep(3); return;
   }
@@ -960,7 +940,7 @@ document.getElementById('dispatch').onclick = () => {
 };
 document.getElementById('done-btn').onclick = () => { closeWizard(); show('loads'); };
 
-/* ═══════════════ fault injection ═══════════════ */
+/* scenario controls */
 function bindBug(sw, lbl, set, bugKey, onTxt, offTxt, toastOn) {
   document.getElementById(sw).addEventListener('change', (e) => {
     const on = e.target.checked;
@@ -986,8 +966,6 @@ bindBug('sw-b3','lbl-b3', v => useB3 = v, 'b3_register_load_carrier',
 function updateChaosState() {
   const n = [useB1, useB2, useB3].filter(Boolean).length;
   document.getElementById('chaos-dot').className = `cdot ${n ? 'is-on' : 'is-off'}`;
-  document.getElementById('validator-tag').textContent =
-    n ? `validator v1.0.0 · ${n} bug${n > 1 ? 's' : ''} injected` : 'validator v1.0.0';
 }
 document.getElementById('chaos-head').onclick = () => {
   const body = document.getElementById('chaos-body');
@@ -1022,7 +1000,7 @@ async function refreshStatus() {
     if (rate >= 0.10) {
       dot.className = 'sdot is-rose'; txt.style.color = 'var(--rose)';
       txt.textContent = 'SEV2 — FAILRATE OVER THRESHOLD';
-      sub.textContent = `failrate ${pct}% > 10% · alert → NexAI`;
+      sub.textContent = `failrate ${pct}% > 10% · alerting`;
     } else if (rate >= 0.03) {
       dot.className = 'sdot is-amber'; txt.style.color = 'var(--yellow)';
       txt.textContent = 'ELEVATED FAILURE RATE';
@@ -1049,12 +1027,11 @@ async function refreshStatus() {
     else if (rate >= 0.03) { hChip.textContent = 'DEGRADED'; hChip.className = 'chip chip--amber'; }
     else { hChip.textContent = 'HEALTHY'; hChip.className = 'chip chip--green'; }
 
-    const CODE_BUG = { ERP_PO_LINKAGE_FAILED:'B1', CARRIER_RATE_FAILED:'B2', CARRIER_LOOKUP_FAILED:'B3' };
     document.getElementById('health-codes').innerHTML = Object.entries(codes)
       .filter(([, v]) => v > 0)
       .map(([c, v]) => `
         <div class="logline">
-          <span class="dim">${CODE_BUG[c] || '·'} ${c}</span>
+          <span class="dim">${c}</span>
           <span class="rose">${Math.round(v)}</span>
         </div>`).join('')
       || '<div class="dim text-[11px]">no downstream failures recorded.</div>';
@@ -1068,6 +1045,15 @@ function tickClock() {
 }
 tickClock(); setInterval(tickClock, 30000);
 refreshStatus(); setInterval(refreshStatus, 10000);
+
+/* hidden operator controls — Ctrl+Shift+B toggles the scenario panel (or ?debug in the URL) */
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && (e.key === 'B' || e.key === 'b')) {
+    const c = document.getElementById('chaos'); c.hidden = !c.hidden;
+  }
+});
+if (/[?&]debug/.test(location.search)) document.getElementById('chaos').hidden = false;
+
 show('dashboard');
 </script>
 </body>
