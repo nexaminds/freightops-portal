@@ -7,101 +7,154 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%230f2440'/%3E%3Cpath d='M8 31h21v-13H8zM29 23h6l5 5v3h-11z' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linejoin='round'/%3E%3Ccircle cx='15' cy='33' r='3' fill='%23f97316'/%3E%3Ccircle cx='34' cy='33' r='3' fill='%23f97316'/%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            navy:   { 50:'#f4f7fb', 100:'#e6edf6', 200:'#c8d8eb', 300:'#9bb8d9', 400:'#5d87b8', 500:'#2d5e96', 600:'#1e4d8c', 700:'#173a6b', 800:'#102a4e', 900:'#0f2440', 950:'#0a1830' },
+            navy:   { 50:'#f4f7fc', 100:'#e7eef8', 200:'#cbdcef', 300:'#9fbfe0', 400:'#6593c4', 500:'#3c6aa0', 600:'#295189', 700:'#1c3d6c', 800:'#132a4d', 900:'#0b1c37', 950:'#060f22' },
             accent: { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c', 700:'#c2410c' },
-            line:   '#e3e9f1',
-            inkmut: '#5b6b81',
+            line:   '#e4ebf4',
+            inkmut: '#586a82',
           },
           fontFamily: {
-            sans: ['Inter','system-ui','sans-serif'],
-            mono: ['JetBrains Mono','Menlo','monospace'],
+            sans:    ['Inter','system-ui','sans-serif'],
+            display: ['Sora','Inter','system-ui','sans-serif'],
+            mono:    ['JetBrains Mono','Menlo','monospace'],
           },
           boxShadow: {
-            card: '0 1px 2px rgba(15,36,64,.05), 0 4px 16px rgba(15,36,64,.05)',
-            pop:  '0 4px 6px rgba(15,36,64,.07), 0 16px 40px rgba(15,36,64,.16)',
+            card: '0 1px 2px rgba(11,28,55,.04), 0 6px 20px rgba(11,28,55,.06)',
+            pop:  '0 8px 12px rgba(11,28,55,.08), 0 24px 50px rgba(11,28,55,.20)',
           },
         }
       }
     }
   </script>
   <style>
-    body { font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    body { font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+           background:
+             radial-gradient(900px 460px at 88% -8%, rgba(249,115,22,.07), transparent 60%),
+             radial-gradient(820px 520px at -6% 110%, rgba(30,117,220,.08), transparent 55%),
+             linear-gradient(180deg,#f3f7fc 0%, #e9f0f9 100%);
+    }
     [hidden] { display:none !important; }
 
+    /* display type — Sora for brand, headings & metrics */
+    h1, h2, h3, .display, [id^="kpi-"], [id^="health-"] .font-mono,
+    #topbar-title { font-family:'Sora','Inter',sans-serif; letter-spacing:-.018em; }
+    [id^="kpi-"] { font-feature-settings:"tnum"; }
+
+    /* selection + scrollbars */
+    ::selection { background:rgba(249,115,22,.22); }
+    main::-webkit-scrollbar, nav::-webkit-scrollbar { width:9px; }
+    main::-webkit-scrollbar-thumb, nav::-webkit-scrollbar-thumb { background:rgba(28,61,108,.18); border-radius:99px; border:2px solid transparent; background-clip:content-box; }
+    main::-webkit-scrollbar-thumb:hover { background:rgba(28,61,108,.32); background-clip:content-box; }
+
+    /* sidebar — deep gradient command surface w/ subtle grid + glow */
+    aside { position:relative; background:linear-gradient(176deg,#0a1730 0%, #060f22 62%, #050b1a 100%); }
+    aside::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+      background:
+        radial-gradient(420px 220px at 50% -4%, rgba(249,115,22,.13), transparent 70%),
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px) 0 0/100% 26px; }
+    aside > * { position:relative; }
+
     /* sidebar nav */
-    .nav-item { display:flex; align-items:center; gap:.65rem; padding:.55rem .75rem; border-radius:.5rem;
-                font-size:.84rem; font-weight:500; color:#aebed4; transition:all .12s ease; cursor:pointer; }
-    .nav-item:hover { color:#fff; background:rgba(255,255,255,.06); }
-    .nav-item.active { color:#fff; background:rgba(249,115,22,.16); }
+    .nav-item { position:relative; display:flex; align-items:center; gap:.7rem; padding:.6rem .8rem; border-radius:.65rem;
+                font-size:.85rem; font-weight:500; color:#b3c4da; transition:all .15s ease; cursor:pointer; }
+    .nav-item:hover { color:#fff; background:rgba(255,255,255,.055); }
+    .nav-item.active { color:#fff; background:linear-gradient(90deg, rgba(249,115,22,.20), rgba(249,115,22,.04)); }
+    .nav-item.active::before { content:""; position:absolute; left:-3px; top:18%; bottom:18%; width:3px; border-radius:99px;
+                               background:linear-gradient(#fb923c,#f97316); box-shadow:0 0 12px rgba(249,115,22,.6); }
     .nav-item.active svg { color:#fb923c; }
     .nav-item svg { width:18px; height:18px; flex-shrink:0; }
 
     /* switch */
     .switch { position:relative; width:34px; height:19px; flex-shrink:0; }
     .switch input { opacity:0; width:0; height:0; }
-    .switch .track { position:absolute; inset:0; background:#3a4f6e; border-radius:999px; transition:background .15s; cursor:pointer; }
+    .switch .track { position:absolute; inset:0; background:#34496a; border-radius:999px; transition:background .18s; cursor:pointer; }
     .switch .track::after { content:""; position:absolute; top:2.5px; left:3px; width:14px; height:14px;
-                            background:#fff; border-radius:999px; transition:transform .15s; }
-    .switch input:checked + .track { background:#f43f5e; }
+                            background:#fff; border-radius:999px; transition:transform .18s; box-shadow:0 1px 2px rgba(0,0,0,.35); }
+    .switch input:checked + .track { background:#f43f5e; box-shadow:0 0 0 3px rgba(244,63,94,.18); }
     .switch input:checked + .track::after { transform:translateX(14px); }
 
     /* wizard steps */
-    .wstep { width:26px; height:26px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-             font-size:.72rem; font-weight:700; transition:all .2s ease; }
-    .wstep-active  { background:#1e4d8c; color:#fff; box-shadow:0 0 0 4px rgba(30,77,140,.14); }
-    .wstep-done    { background:#f97316; color:#fff; }
-    .wstep-pending { background:#e6edf6; color:#8295ac; }
+    .wstep { width:27px; height:27px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+             font-size:.72rem; font-weight:700; transition:all .25s ease; }
+    .wstep-active  { background:linear-gradient(135deg,#295189,#1c3d6c); color:#fff; box-shadow:0 0 0 4px rgba(28,61,108,.16); }
+    .wstep-done    { background:linear-gradient(135deg,#fb923c,#ea580c); color:#fff; box-shadow:0 4px 10px rgba(249,115,22,.3); }
+    .wstep-pending { background:#e7eef8; color:#8295ac; }
 
     /* fields */
-    .fld { width:100%; border:1px solid #d6deea; border-radius:.55rem; padding:.55rem .75rem; font-size:.86rem;
-           background:#fff; transition:border-color .12s, box-shadow .12s; }
-    .fld:focus { outline:none; border-color:#1e4d8c; box-shadow:0 0 0 3px rgba(30,77,140,.13); }
-    .fld.err { border-color:#f43f5e; box-shadow:0 0 0 3px rgba(244,63,94,.10); }
-    .fld-msg { display:none; font-size:.72rem; color:#e11d48; margin-top:.3rem; font-weight:500; }
+    .fld { width:100%; border:1px solid #d6dfec; border-radius:.65rem; padding:.62rem .8rem; font-size:.88rem;
+           background:#fff; transition:border-color .14s, box-shadow .14s; }
+    .fld:hover { border-color:#bccbe0; }
+    .fld:focus { outline:none; border-color:#295189; box-shadow:0 0 0 3.5px rgba(41,81,137,.14); }
+    .fld.err { border-color:#f43f5e; box-shadow:0 0 0 3.5px rgba(244,63,94,.11); }
+    .fld-msg { display:none; font-size:.73rem; color:#e11d48; margin-top:.32rem; font-weight:500; }
     .fld-msg.show { display:block; }
 
-    .chip { font-size:.7rem; font-weight:600; padding:.18rem .55rem; border-radius:999px; white-space:nowrap; }
+    .chip { display:inline-flex; align-items:center; font-size:.7rem; font-weight:600; padding:.22rem .6rem;
+            border-radius:999px; white-space:nowrap; letter-spacing:.01em; }
+
+    /* cards: subtle hover lift where opted-in */
+    .card-lift { transition:box-shadow .22s ease, transform .22s ease, border-color .22s ease; }
+    .card-lift:hover { box-shadow:0 8px 12px rgba(11,28,55,.08), 0 22px 44px rgba(11,28,55,.14); transform:translateY(-3px); border-color:#d4deec; }
+    #kpi-grid > div, #carriers-grid > div { transition:box-shadow .22s ease, transform .22s ease, border-color .22s ease; }
+    #kpi-grid > div:hover, #carriers-grid > div:hover { box-shadow:0 8px 12px rgba(11,28,55,.08), 0 22px 44px rgba(11,28,55,.14); transform:translateY(-3px); border-color:#d4deec; }
+    /* KPI metric numbers a touch larger + Sora */
+    #kpi-grid [id^="kpi-"] { font-size:2.1rem; }
 
     @keyframes toast-in { from { transform:translateY(14px); opacity:0 } to { transform:none; opacity:1 } }
     .toast { animation:toast-in .22s ease-out; }
     @keyframes pulse-dot { 0%,100% { opacity:1 } 50% { opacity:.35 } }
     .pulse { animation:pulse-dot 1.6s ease-in-out infinite; }
-    .scrim { background:rgba(10,24,48,.62); backdrop-filter:blur(3px); }
+    @keyframes rise { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
+    .rise { animation:rise .4s cubic-bezier(.22,1,.36,1) both; }
+    .scrim { background:rgba(6,15,34,.55); backdrop-filter:blur(5px); }
 
-    .tbl th { font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; font-weight:600; color:#7b8aa0;
-              padding:.6rem 1rem; text-align:left; border-bottom:1px solid #e3e9f1; background:#f8fafc; }
-    .tbl td { padding:.7rem 1rem; font-size:.84rem; border-bottom:1px solid #eef2f7; vertical-align:middle; }
+    .tbl th { font-size:.67rem; text-transform:uppercase; letter-spacing:.08em; font-weight:600; color:#7e8da4;
+              padding:.65rem 1.1rem; text-align:left; border-bottom:1px solid #e4ebf4; background:#f7fafd; }
+    .tbl td { padding:.78rem 1.1rem; font-size:.85rem; border-bottom:1px solid #eef2f8; vertical-align:middle; }
     .tbl tr:last-child td { border-bottom:none; }
-    .tbl tbody tr:hover { background:#f7fafd; }
+    .tbl tbody tr { transition:background .12s; }
+    .tbl tbody tr:hover { background:#f5f9fd; }
   </style>
 </head>
 <body class="bg-navy-50 text-navy-900 h-screen overflow-hidden flex">
 
+  <!-- Nexaminds mark sprite (reusable) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="nxg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e75dc"/><stop offset=".42" stop-color="#159fbd"/>
+      <stop offset=".72" stop-color="#09d795"/><stop offset="1" stop-color="#00ff79"/>
+    </linearGradient>
+    <symbol id="nx-mark" viewBox="0 0 183.55 257.06">
+      <path fill="url(#nxg)" d="M59.06,236.06a15.83,15.83,0,0,1-4.4-10.1V198.4a13.33,13.33,0,0,0-4.86-9.54L4.86,156.17A13.3,13.3,0,0,1,0,146.63V68.89a13.88,13.88,0,0,1,4.75-9.68L80,1.09c2.61-2,4.75-1.15,4.75,1.93a53.54,53.54,0,0,1-1.54,11.42,12.16,12.16,0,0,1-1.52,6.26,39.21,39.21,0,0,1-7.9,8.2l-51.57,38a13.42,13.42,0,0,0-4.83,9.57v37.42a14.85,14.85,0,0,0,4.57,9.91l58.22,49.63a14.85,14.85,0,0,1,4.57,9.9v70.52c0,3.31-2,4.17-4.4,1.92Z"/>
+      <path fill="url(#nxg)" d="M98.83,183.37a14.81,14.81,0,0,1,4.57-9.9l58.22-49.63a14.85,14.85,0,0,0,4.57-9.91V76.51a13.43,13.43,0,0,0-4.84-9.57l-51.57-38a39.14,39.14,0,0,1-7.89-8.2C100.2,18.15,98.83,6.11,98.83,3s2.14-4,4.75-1.94l75.21,58.12a13.85,13.85,0,0,1,4.76,9.68v77.74a13.3,13.3,0,0,1-4.86,9.54l-44.95,32.69a13.33,13.33,0,0,0-4.86,9.54V226a15.83,15.83,0,0,1-4.4,10.1l-21.25,19.75c-2.42,2.25-4.4,1.38-4.4-1.92Z"/>
+    </symbol>
+    <symbol id="nx-mark-w" viewBox="0 0 183.55 257.06">
+      <path fill="#fff" d="M59.06,236.06a15.83,15.83,0,0,1-4.4-10.1V198.4a13.33,13.33,0,0,0-4.86-9.54L4.86,156.17A13.3,13.3,0,0,1,0,146.63V68.89a13.88,13.88,0,0,1,4.75-9.68L80,1.09c2.61-2,4.75-1.15,4.75,1.93a53.54,53.54,0,0,1-1.54,11.42,12.16,12.16,0,0,1-1.52,6.26,39.21,39.21,0,0,1-7.9,8.2l-51.57,38a13.42,13.42,0,0,0-4.83,9.57v37.42a14.85,14.85,0,0,0,4.57,9.91l58.22,49.63a14.85,14.85,0,0,1,4.57,9.9v70.52c0,3.31-2,4.17-4.4,1.92Z"/>
+      <path fill="#fff" d="M98.83,183.37a14.81,14.81,0,0,1,4.57-9.9l58.22-49.63a14.85,14.85,0,0,0,4.57-9.91V76.51a13.43,13.43,0,0,0-4.84-9.57l-51.57-38a39.14,39.14,0,0,1-7.89-8.2C100.2,18.15,98.83,6.11,98.83,3s2.14-4,4.75-1.94l75.21,58.12a13.85,13.85,0,0,1,4.76,9.68v77.74a13.3,13.3,0,0,1-4.86,9.54l-44.95,32.69a13.33,13.33,0,0,0-4.86,9.54V226a15.83,15.83,0,0,1-4.4,10.1l-21.25,19.75c-2.42,2.25-4.4,1.38-4.4-1.92Z"/>
+    </symbol>
+  </defs></svg>
+
   <!-- ════════ SIDEBAR ════════ -->
   <aside class="w-60 bg-navy-950 flex flex-col flex-shrink-0">
     <!-- Logo -->
-    <div class="px-5 pt-5 pb-4 flex items-center gap-3">
-      <svg width="38" height="38" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-        <rect width="48" height="48" rx="10" fill="url(#lg)"/>
-        <defs>
-          <linearGradient id="lg" x1="0" y1="0" x2="48" y2="48">
-            <stop stop-color="#1e4d8c"/><stop offset="1" stop-color="#0f2440"/>
-          </linearGradient>
-        </defs>
-        <path d="M8 31h21V18H8v13zM29 23h6.2l4.8 5v3H29v-8z" stroke="#fff" stroke-width="2.6" stroke-linejoin="round" fill="none"/>
-        <circle cx="15" cy="33.5" r="3.1" fill="#f97316"/>
-        <circle cx="34" cy="33.5" r="3.1" fill="#f97316"/>
-        <path d="M11 14h10M14 10h13" stroke="#f97316" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
-      </svg>
+    <div class="px-5 pt-6 pb-5 flex items-center gap-3">
+      <div class="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+           style="background:linear-gradient(140deg,#f97316,#ea580c);box-shadow:0 6px 16px rgba(249,115,22,.4), inset 0 1px 0 rgba(255,255,255,.35)">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <path d="M8 31h21V18H8v13zM29 23h6.2l4.8 5v3H29v-8z" stroke="#fff" stroke-width="3" stroke-linejoin="round" fill="none"/>
+          <circle cx="15" cy="33.5" r="3.2" fill="#fff"/>
+          <circle cx="34" cy="33.5" r="3.2" fill="#fff"/>
+        </svg>
+      </div>
       <div>
-        <div class="text-white font-bold text-[15px] leading-tight tracking-tight">FreightOps</div>
-        <div class="text-[10px] uppercase tracking-[.14em] text-navy-300 leading-tight">TMS Platform</div>
+        <div class="text-white font-display font-extrabold text-[16px] leading-none tracking-tight">FreightOps</div>
+        <div class="text-[9.5px] uppercase tracking-[.2em] text-navy-300 leading-none mt-1.5">TMS Platform</div>
       </div>
     </div>
 
@@ -145,8 +198,12 @@
         <span id="sb-text" class="text-navy-200 font-medium truncate">All systems operational</span>
       </div>
       <div id="sb-sub" class="text-[10px] text-navy-400 mt-1 pl-4">failure rate 0.0% · auto-refresh 10s</div>
-      <div class="mt-3 text-[10px] text-navy-500 leading-relaxed">
-        Monitored by <span class="text-navy-300 font-semibold">NexAI</span> · validation events stream to Prometheus
+      <div class="mt-3.5 pt-3 border-t border-navy-800/70 flex items-center gap-2.5">
+        <svg width="14" height="20" aria-hidden="true"><use href="#nx-mark"/></svg>
+        <div class="text-[10px] text-navy-500 leading-snug">
+          Monitored by <span class="text-white font-semibold">NexAI Agents</span><br>
+          by <span class="font-display font-semibold text-navy-200">Nexaminds</span> · streams to Prometheus
+        </div>
       </div>
     </div>
   </aside>
@@ -174,8 +231,16 @@
 
       <!-- ──────── DASHBOARD ──────── -->
       <section id="view-dashboard" class="p-6 max-w-[1200px] mx-auto">
+        <!-- page hero -->
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5 rise">
+          <div>
+            <h2 class="text-[22px] font-display font-extrabold tracking-tight leading-none">Operations Overview</h2>
+            <p class="text-sm text-inkmut mt-1.5">Live load pipeline, carrier network health, and downstream validation signal.</p>
+          </div>
+          <span class="chip bg-emerald-100 text-emerald-700 gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse"></span> Telemetry live</span>
+        </div>
         <!-- KPI row -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div id="kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="bg-white rounded-xl border border-line shadow-card p-5">
             <div class="flex items-center justify-between">
               <span class="text-[11px] uppercase tracking-wider text-inkmut font-semibold">In Transit</span>
@@ -259,16 +324,23 @@
         </div>
 
         <!-- Incident pipeline strip -->
-        <div class="mt-4 bg-navy-900 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center gap-4">
-          <div class="flex-shrink-0">
-            <div class="text-[10px] uppercase tracking-[.14em] text-accent-400 font-bold">Autonomous incident response</div>
-            <div class="text-white font-bold text-sm mt-1">Detect → Triage → Fix → Test → Postmortem</div>
+        <div class="mt-4 relative overflow-hidden rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center gap-5"
+             style="background:linear-gradient(120deg,#0b1c37 0%,#060f22 60%,#08182f 100%)">
+          <div aria-hidden="true" class="absolute inset-0 pointer-events-none"
+               style="background:radial-gradient(420px 200px at 12% -20%, rgba(249,115,22,.16), transparent 65%), radial-gradient(420px 220px at 100% 120%, rgba(0,255,121,.10), transparent 60%)"></div>
+          <div class="relative flex items-center gap-3.5 flex-shrink-0 lg:w-64">
+            <svg width="30" height="42" aria-hidden="true" class="flex-shrink-0"><use href="#nx-mark"/></svg>
+            <div>
+              <div class="text-[10px] uppercase tracking-[.16em] text-accent-400 font-bold">Autonomous Incident Response</div>
+              <div class="text-white font-display font-bold text-[15px] mt-1 leading-tight">Detect → Triage → Fix → Test → PR</div>
+              <div class="text-[11px] text-navy-300 mt-1">Powered by <span class="text-navy-100 font-semibold">NexAI Agents</span></div>
+            </div>
           </div>
-          <div class="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div class="bg-navy-800/70 rounded-lg p-3"><div class="text-navy-300">Mean detection</div><div class="text-white font-mono font-bold mt-0.5">&lt; 90 s</div></div>
-            <div class="bg-navy-800/70 rounded-lg p-3"><div class="text-navy-300">Mean fix PR</div><div class="text-white font-mono font-bold mt-0.5">&lt; 5 min</div></div>
-            <div class="bg-navy-800/70 rounded-lg p-3"><div class="text-navy-300">Regression tests</div><div class="text-white font-mono font-bold mt-0.5">auto-authored</div></div>
-            <div class="bg-navy-800/70 rounded-lg p-3"><div class="text-navy-300">Human gate</div><div class="text-white font-mono font-bold mt-0.5">review &amp; merge</div></div>
+          <div class="relative flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Mean detection</div><div class="text-white font-display font-bold text-lg mt-1 leading-none">&lt;90<span class="text-[11px] text-navy-300 font-sans font-medium ml-0.5">s</span></div></div>
+            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Mean fix PR</div><div class="text-white font-display font-bold text-lg mt-1 leading-none">&lt;5<span class="text-[11px] text-navy-300 font-sans font-medium ml-0.5">min</span></div></div>
+            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Regression tests</div><div class="text-white font-semibold text-[13px] mt-1.5 leading-none">auto-authored</div></div>
+            <div class="rounded-xl p-3.5 border border-white/5" style="background:rgba(255,255,255,.04)"><div class="text-navy-300 text-[10.5px]">Human gate</div><div class="text-white font-semibold text-[13px] mt-1.5 leading-none">review &amp; merge</div></div>
           </div>
         </div>
       </section>
