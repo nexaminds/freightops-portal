@@ -1,26 +1,19 @@
-# Run the full stack:
-#   docker compose -f observability/docker-compose.snippet.yml up -d
+# FreightOps observability — DATADOG ONLY.
+#   docker compose -f observability/docker-compose.snippet.yml up -d --remove-orphans
 #
-# Services exposed:
-#   portal-app  →  http://localhost:8080
-#   prometheus  →  http://localhost:9094
-#   grafana     →  http://localhost:3001  (admin / freight2026)
-#   loki        →  http://localhost:3100  (internal only; Grafana datasource)
-#   promtail    →  (no external port; scrapes Docker socket)
+# Services:
+#   portal-app    →  http://localhost:8080         (the TMS app)
+#   datadog-agent →  scrapes portal-app:8080/metrics (OpenMetrics) + collects
+#                    container logs + APM → ${DD_SITE} (set DD_API_KEY in .env)
+#
+# Prometheus / Grafana / Loki / Promtail were removed — Datadog is the sole
+# observability backend (metrics, logs, traces). The monitor that drives the
+# NexAI incident pipeline is Datadog monitor "FreightOps · Load Validation
+# Failure Rate > 10%" (grouped by error_code).
 
 networks:
   freightops:
     driver: bridge
-
-volumes:
-  prometheus-data:
-    driver: local
-  grafana-data:
-    driver: local
-  loki-data:
-    driver: local
-  promtail-positions:
-    driver: local
 
 services:
 
@@ -39,11 +32,10 @@ services:
       STATIC_DIR: "/app/public"
       APP_NAME: "freightops-portal"
       APP_ENV:  "prod"
-      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN:-}"
-      SLACK_CHANNEL:   "${SLACK_CHANNEL:-}"
-      PLAYBOOK_PATH:   "/mnt/c/Users/Bernardo/nexai-framework/demo/logistics/playbooks/incident-response-v1.md"
-    depends_on:
-      - prometheus
+      DD_ENV: "prod"
+      DD_SERVICE: "freightops-portal"
+      DD_VERSION: "1.0.0"
+      DD_AGENT_HOST: "datadog-agent"
     networks:
       - freightops
     logging:
@@ -51,107 +43,34 @@ services:
       options:
         tag: "{{.Name}}"
     labels:
-      logging: loki
       env: prod
       app: freightops-portal
+      com.datadoghq.ad.logs: '[{"source":"nodejs","service":"freightops-portal"}]'
 
-  prometheus:
-    image: prom/prometheus:v2.52.0
-    volumes:
-      - type: bind
-        source: ./prometheus.yml
-        target: /etc/prometheus/prometheus.yml
-        read_only: true
-      - prometheus-data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=30d"
-      - "--web.enable-lifecycle"
-    ports:
-      - "9094:9090"
-    networks:
-      - freightops
-    logging:
-      driver: json-file
-      options:
-        tag: "{{.Name}}"
-    labels:
-      logging: loki
-      env: prod
-      app: prometheus
-
-  grafana:
-    image: grafana/grafana:11.1.0
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - type: bind
-        source: ./grafana/provisioning
-        target: /etc/grafana/provisioning
-        read_only: true
+  # Datadog Agent — scrapes portal-app:8080/metrics via the OpenMetrics check
+  # (datadog/openmetrics.yaml), collects container logs, and ships to ${DD_SITE}.
+  datadog-agent:
+    image: registry.datadoghq.com/agent:7
     environment:
-      GF_SECURITY_ADMIN_USER:     admin
-      GF_SECURITY_ADMIN_PASSWORD: freight2026
-      GF_SERVER_HTTP_PORT:        "3000"
-      GF_UNIFIED_ALERTING_ENABLED: "true"
-      GF_ALERTING_ENABLED:         "false"
-    ports:
-      - "3001:3000"
-    depends_on:
-      - prometheus
-      - loki
-    networks:
-      - freightops
-    logging:
-      driver: json-file
-      options:
-        tag: "{{.Name}}"
-    labels:
-      logging: loki
-      env: prod
-      app: grafana
-
-  loki:
-    image: grafana/loki:3.1.0
-    command: ["-config.file=/etc/loki/loki-config.yml"]
+      DD_API_KEY: "${DD_API_KEY:?set DD_API_KEY in observability/.env}"
+      DD_SITE: "${DD_SITE:-us5.datadoghq.com}"
+      DD_ENV: "prod"
+      DD_HOSTNAME: "freightops-local"
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_PROCESS_AGENT_ENABLED: "true"
+      DD_CONTAINER_EXCLUDE: "name:datadog-agent"
     volumes:
-      - type: bind
-        source: ./loki-config.yml
-        target: /etc/loki/loki-config.yml
-        read_only: true
-      - loki-data:/loki
-    ports:
-      - "3200:3100"
-    networks:
-      - freightops
-    logging:
-      driver: json-file
-      options:
-        tag: "{{.Name}}"
-    labels:
-      logging: loki
-      env: prod
-      app: loki
-
-  promtail:
-    image: grafana/promtail:3.1.0
-    command: ["-config.file=/etc/promtail/promtail-config.yml"]
-    volumes:
-      - type: bind
-        source: ./promtail-config.yml
-        target: /etc/promtail/promtail-config.yml
-        read_only: true
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - promtail-positions:/var/lib/promtail
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - ./datadog/openmetrics.yaml:/etc/datadog-agent/conf.d/openmetrics.d/conf.yaml:ro
     depends_on:
-      - loki
+      - portal-app
     networks:
       - freightops
-    logging:
-      driver: json-file
-      options:
-        tag: "{{.Name}}"
     labels:
-      logging: loki
-      env: prod
-      app: promtail
+      app: datadog-agent
